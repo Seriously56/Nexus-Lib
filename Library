@@ -1,583 +1,1434 @@
---====================================================================--
--- NEXUS UI LIBRARY v4 — FULLY COMPLETE (No Missing Parts)
--- Max Money Pink/Purple Theme + Confined Particles + EVERY COMPONENT
---====================================================================--
--- Just paste and use. Nothing else needed.
---====================================================================--
+-- Nexus UI Library v1.0
+-- Fully custom UI library with Max Money style design
 
-local Nexus = {}
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
-
-local Player = Players.LocalPlayer
-local Mouse = Player:GetMouse()
-
---====================================================================--
--- MAX MONEY COLORS
---====================================================================--
-local Colors = {
-    Background    = Color3.fromRGB(15, 8, 15),
-    Surface       = Color3.fromRGB(25, 15, 25),
-    Primary       = Color3.fromRGB(40, 25, 35),
-    Border        = Color3.fromRGB(60, 40, 55),
-    TextPrimary   = Color3.fromRGB(255, 240, 245),
-    TextSecondary = Color3.fromRGB(200, 170, 185),
-
-    PinkLight     = Color3.fromRGB(255, 182, 193),
-    PinkMedium    = Color3.fromRGB(255, 105, 180),
-    PinkDark      = Color3.fromRGB(255, 20, 147),
-    PinkBright    = Color3.fromRGB(255, 130, 190),
-    PinkNeon      = Color3.fromRGB(255, 60, 160),
-
-    HoverPrimary  = Color3.fromRGB(50, 35, 45),
-    Success       = Color3.fromRGB(100, 255, 150),
-    Warning       = Color3.fromRGB(255, 200, 100),
-    Error         = Color3.fromRGB(255, 100, 130),
+local Nexus = {
+    Version = "1.0",
+    Colors = {},
+    Components = {},
+    Config = {},
+    Themes = {},
+    Utils = {}
 }
 
---====================================================================--
--- PARTICLE SYSTEM (Confined to Container)
---====================================================================--
-local function CreateParticleSystem(Container)
-    local Particles = {}
-    local Bounds = {MinX=0, MaxX=0, MinY=0, MaxY=0}
-    local MousePos = Vector2.new()
+-- Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local TextService = game:GetService("TextService")
 
-    local function UpdateBounds()
-        local ap = Container.AbsolutePosition
-        local as = Container.AbsoluteSize
-        Bounds = {MinX=ap.X, MaxX=ap.X+as.X, MinY=ap.Y, MaxY=ap.Y+as.Y}
+local Player = Players.LocalPlayer
+
+-- ========================================
+-- COLOR SYSTEM
+-- ========================================
+Nexus.Colors.Palettes = {
+    MaxMoney = {
+        Background = Color3.fromRGB(15, 8, 15),
+        Surface = Color3.fromRGB(25, 15, 25),
+        Primary = Color3.fromRGB(40, 25, 35),
+        Secondary = Color3.fromRGB(40, 28, 38),
+        Border = Color3.fromRGB(60, 40, 55),
+        TextPrimary = Color3.fromRGB(255, 240, 245),
+        TextSecondary = Color3.fromRGB(200, 170, 185),
+        Success = Color3.fromRGB(100, 255, 150),
+        Error = Color3.fromRGB(255, 100, 130),
+        Warning = Color3.fromRGB(255, 200, 100),
+        Discord = Color3.fromRGB(180, 65, 160),
+        GetKey = Color3.fromRGB(255, 105, 180),
+        HoverPrimary = Color3.fromRGB(50, 35, 45),
+        HoverGetKey = Color3.fromRGB(255, 120, 200),
+        HoverDiscord = Color3.fromRGB(200, 85, 180),
+        
+        -- Gradient colors
+        PinkLight = Color3.fromRGB(255, 182, 193),
+        PinkMedium = Color3.fromRGB(255, 105, 180),
+        PinkDark = Color3.fromRGB(255, 20, 147),
+        PinkBright = Color3.fromRGB(255, 130, 190),
+        PinkNeon = Color3.fromRGB(255, 60, 160)
+    },
+    
+    Dark = {
+        Background = Color3.fromRGB(20, 20, 20),
+        Surface = Color3.fromRGB(30, 30, 30),
+        Primary = Color3.fromRGB(45, 45, 45),
+        Secondary = Color3.fromRGB(60, 60, 60),
+        Border = Color3.fromRGB(80, 80, 80),
+        TextPrimary = Color3.fromRGB(255, 255, 255),
+        TextSecondary = Color3.fromRGB(200, 200, 200),
+        Success = Color3.fromRGB(76, 175, 80),
+        Error = Color3.fromRGB(244, 67, 54),
+        Warning = Color3.fromRGB(255, 152, 0),
+        Discord = Color3.fromRGB(114, 137, 218),
+        GetKey = Color3.fromRGB(0, 150, 255),
+        HoverPrimary = Color3.fromRGB(65, 65, 65),
+        HoverGetKey = Color3.fromRGB(30, 170, 255),
+        HoverDiscord = Color3.fromRGB(134, 157, 238)
+    },
+    
+    Ocean = {
+        Background = Color3.fromRGB(10, 15, 25),
+        Surface = Color3.fromRGB(20, 30, 45),
+        Primary = Color3.fromRGB(30, 50, 70),
+        Secondary = Color3.fromRGB(40, 70, 100),
+        Border = Color3.fromRGB(60, 100, 140),
+        TextPrimary = Color3.fromRGB(240, 248, 255),
+        TextSecondary = Color3.fromRGB(180, 200, 220),
+        Success = Color3.fromRGB(100, 255, 200),
+        Error = Color3.fromRGB(255, 100, 150),
+        Warning = Color3.fromRGB(255, 220, 100),
+        Discord = Color3.fromRGB(65, 105, 225),
+        GetKey = Color3.fromRGB(0, 200, 255),
+        HoverPrimary = Color3.fromRGB(50, 80, 110),
+        HoverGetKey = Color3.fromRGB(30, 220, 255),
+        HoverDiscord = Color3.fromRGB(85, 125, 245)
+    }
+}
+
+Nexus.Colors.Current = Nexus.Colors.Palettes.MaxMoney
+
+function Nexus:SetTheme(themeName)
+    if self.Colors.Palettes[themeName] then
+        self.Colors.Current = self.Colors.Palettes[themeName]
+        return true
     end
+    return false
+end
 
-    local function Create()
-        local size = math.random(8,24)
-        local f = Instance.new("Frame")
-        f.Size = UDim2.fromOffset(size,size)
-        f.Position = UDim2.fromScale(math.random(), math.random())
-        f.BackgroundColor3 = Colors.PinkLight
-        f.BackgroundTransparency = math.random(60,85)/100
-        f.BorderSizePixel = 0
-        f.ZIndex = 1
-        f.Parent = Container
+-- ========================================
+-- UTILITY FUNCTIONS
+-- ========================================
+Nexus.Utils.Create = function(className, properties)
+    local obj = Instance.new(className)
+    for prop, value in pairs(properties) do
+        obj[prop] = value
+    end
+    return obj
+end
 
-        local c = Instance.new("UICorner",f); c.CornerRadius = UDim.new(1,0)
-        local g = Instance.new("UIGradient",f)
-        g.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, {Colors.PinkLight,Colors.PinkMedium,Colors.PinkDark}[math.random(1,3)]),
-            ColorSequenceKeypoint.new(1, {Colors.PinkLight,Colors.PinkMedium,Colors.PinkDark}[math.random(1,3)])
+Nexus.Utils.Tween = function(object, properties, duration, easingStyle, easingDirection)
+    local tweenInfo = TweenInfo.new(
+        duration or 0.3,
+        easingStyle or Enum.EasingStyle.Quad,
+        easingDirection or Enum.EasingDirection.Out
+    )
+    local tween = TweenService:Create(object, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
+
+Nexus.Utils.Round = function(num, decimalPlaces)
+    local multiplier = 10^(decimalPlaces or 0)
+    return math.floor(num * multiplier + 0.5) / multiplier
+end
+
+Nexus.Utils.CreateGradient = function(colors, transparency)
+    local sequence = {}
+    for i, color in ipairs(colors) do
+        table.insert(sequence, ColorSequenceKeypoint.new((i-1)/(#colors-1), color))
+    end
+    return ColorSequence.new(sequence)
+end
+
+-- ========================================
+-- CONFIG SYSTEM
+-- ========================================
+Nexus.Config = {
+    Defaults = {
+        EnableParticles = true,
+        EnableAnimations = true,
+        EnableSounds = false,
+        Theme = "MaxMoney",
+        Transparency = 0,
+        CornerRadius = 8,
+        BorderThickness = 1,
+        AnimationSpeed = 0.3
+    },
+    Current = {}
+}
+
+function Nexus:LoadConfig(configTable)
+    self.Config.Current = setmetatable(configTable or {}, {__index = self.Config.Defaults})
+    self:SetTheme(self.Config.Current.Theme)
+end
+
+function Nexus:SaveConfig()
+    return self.Config.Current
+end
+
+function Nexus:GetConfig(key)
+    return self.Config.Current[key] or self.Config.Defaults[key]
+end
+
+function Nexus:SetConfig(key, value)
+    self.Config.Current[key] = value
+end
+
+-- ========================================
+-- PARTICLE SYSTEM
+-- ========================================
+Nexus.Particles = {
+    Systems = {},
+    Enabled = true
+}
+
+function Nexus.Particles:CreateSystem(container, config)
+    local config = config or {}
+    local system = {
+        Particles = {},
+        IsDestroyed = false,
+        MousePosition = {X = 0, Y = 0},
+        GuiBounds = {MinX = 0, MaxX = 0, MinY = 0, MaxY = 0},
+        Config = {
+            MaxParticles = config.MaxParticles or 40,
+            ParticleSizeMin = config.ParticleSizeMin or 8,
+            ParticleSizeMax = config.ParticleSizeMax or 24,
+            ParticleSpeed = config.ParticleSpeed or 0.002,
+            ParticleLifetimeMin = config.ParticleLifetimeMin or 30,
+            ParticleLifetimeMax = config.ParticleLifetimeMax or 60,
+            Colors = config.Colors or {
+                Nexus.Colors.Current.PinkLight,
+                Nexus.Colors.Current.PinkMedium,
+                Nexus.Colors.Current.PinkDark,
+                Color3.fromRGB(255, 150, 200)
+            },
+            RepelStrength = config.RepelStrength or 0.08,
+            RepelRadius = config.RepelRadius or 0.15
         }
-        g.Rotation = math.random(0,360)
+    }
+    
+    local function UpdateGuiBounds()
+        if not container then return end
+        local absolutePosition = container.AbsolutePosition
+        local absoluteSize = container.AbsoluteSize
+        
+        system.GuiBounds = {
+            MinX = absolutePosition.X,
+            MaxX = absolutePosition.X + absoluteSize.X,
+            MinY = absolutePosition.Y,
+            MaxY = absolutePosition.Y + absoluteSize.Y
+        }
+    end
+    
+    local function CreateParticle()
+        if not container or not container.Parent or system.IsDestroyed then
+            return nil
+        end
+        
+        local size = math.random(system.Config.ParticleSizeMin, system.Config.ParticleSizeMax)
+        local particle = Nexus.Utils.Create("Frame", {
+            Size = UDim2.new(0, size, 0, size),
+            Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0),
+            BackgroundColor3 = system.Config.Colors[1],
+            BackgroundTransparency = math.random(60, 85)/100,
+            BorderSizePixel = 0,
+            ZIndex = 5,
+            Selectable = false,
+            Parent = container
+        })
+        
+        Nexus.Utils.Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = particle})
+        
+        local gradient = Nexus.Utils.Create("UIGradient", {
+            Color = Nexus.Utils.CreateGradient({
+                system.Config.Colors[math.random(#system.Config.Colors)],
+                system.Config.Colors[math.random(#system.Config.Colors)]
+            }),
+            Rotation = math.random(0, 360),
+            Parent = particle
+        })
+        
+        local highlight = Nexus.Utils.Create("Frame", {
+            Size = UDim2.new(0.3, 0, 0.3, 0),
+            Position = UDim2.new(0.2, 0, 0.15, 0),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0.3,
+            BorderSizePixel = 0,
+            ZIndex = particle.ZIndex + 1,
+            Parent = particle
+        })
+        
+        Nexus.Utils.Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = highlight})
+        
+        local glow = Nexus.Utils.Create("Frame", {
+            Size = UDim2.new(1.8, 0, 1.8, 0),
+            Position = UDim2.new(-0.4, 0, -0.4, 0),
+            BackgroundColor3 = system.Config.Colors[1],
+            BackgroundTransparency = 0.9,
+            BorderSizePixel = 0,
+            ZIndex = particle.ZIndex - 1,
+            Parent = particle
+        })
+        
+        Nexus.Utils.Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = glow})
+        
+        local particleData = {
+            frame = particle,
+            vx = (math.random() - 0.5) * system.Config.ParticleSpeed,
+            vy = (math.random() - 0.5) * system.Config.ParticleSpeed,
+            created = tick(),
+            rotation = 0,
+            rotationSpeed = (math.random() - 0.5) * 2,
+            pulsePhase = math.random() * math.pi * 2,
+            driftPhase = math.random() * math.pi * 2,
+            originalTransparency = particle.BackgroundTransparency,
+            glow = glow,
+            highlight = highlight,
+            lifetime = math.random(system.Config.ParticleLifetimeMin, system.Config.ParticleLifetimeMax),
+            originalSize = size,
+            wobblePhase = math.random() * math.pi * 2,
+            repelForce = {x = 0, y = 0},
+            mass = size / 10
+        }
+        
+        table.insert(system.Particles, particleData)
+        return particle
+    end
+    
+    local function UpdateParticles()
+        if system.IsDestroyed or not container then return end
+        
+        UpdateGuiBounds()
+        
+        local screenSize = container.AbsoluteSize
+        local mouseScreenX = (system.MousePosition.X - system.GuiBounds.MinX) / screenSize.X
+        local mouseScreenY = (system.MousePosition.Y - system.GuiBounds.MinY) / screenSize.Y
+        
+        for i = #system.Particles, 1, -1 do
+            local p = system.Particles[i]
+            
+            if not p or not p.frame or not p.frame.Parent then
+                table.remove(system.Particles, i)
+            else
+                local currentPos = p.frame.Position
+                local age = tick() - p.created
+                
+                if age > p.lifetime then
+                    p.frame:Destroy()
+                    table.remove(system.Particles, i)
+                else
+                    local distanceToMouse = math.sqrt(
+                        (currentPos.X.Scale - mouseScreenX)^2 + 
+                        (currentPos.Y.Scale - mouseScreenY)^2
+                    )
+                    
+                    local repelForceX, repelForceY = 0, 0
+                    
+                    if distanceToMouse < system.Config.RepelRadius and distanceToMouse > 0 then
+                        local repelPower = (system.Config.RepelRadius - distanceToMouse) / system.Config.RepelRadius
+                        repelPower = repelPower * system.Config.RepelStrength / p.mass
+                        
+                        local directionX = (currentPos.X.Scale - mouseScreenX) / distanceToMouse
+                        local directionY = (currentPos.Y.Scale - mouseScreenY) / distanceToMouse
+                        
+                        repelForceX = directionX * repelPower
+                        repelForceY = directionY * repelPower
+                    end
+                    
+                    p.repelForce.x = p.repelForce.x * 0.85 + repelForceX * 0.15
+                    p.repelForce.y = p.repelForce.y * 0.85 + repelForceY * 0.15
+                    
+                    local newX = currentPos.X.Scale + p.vx + p.repelForce.x
+                    local newY = currentPos.Y.Scale + p.vy + p.repelForce.y
+                    
+                    if newX < 0 then newX = 0; p.vx = math.abs(p.vx) * 0.5
+                    elseif newX > 1 then newX = 1; p.vx = -math.abs(p.vx) * 0.5 end
+                    
+                    if newY < 0 then newY = 0; p.vy = math.abs(p.vy) * 0.5
+                    elseif newY > 1 then newY = 1; p.vy = -math.abs(p.vy) * 0.5 end
+                    
+                    local wobbleTime = tick() * 1.5 + p.wobblePhase
+                    newX = newX + math.sin(wobbleTime) * 0.001
+                    newY = newY + math.cos(wobbleTime * 0.7) * 0.001
+                    
+                    newX = newX + (math.random() - 0.5) * 0.0004
+                    newY = newY + (math.random() - 0.5) * 0.0003
+                    
+                    p.rotation = p.rotation + p.rotationSpeed
+                    p.frame.Rotation = p.rotation
+                    
+                    local breathe = math.sin(tick() * 2.5 + p.pulsePhase) * 0.1 + 1
+                    local currentSize = p.originalSize * breathe
+                    p.frame.Size = UDim2.new(0, currentSize, 0, currentSize)
+                    
+                    local transparencyPulse = math.sin(tick() * 3 + p.pulsePhase) * 0.1
+                    local newTransparency = math.max(0.5, math.min(0.95, p.originalTransparency + transparencyPulse))
+                    p.frame.BackgroundTransparency = newTransparency
+                    
+                    local glowIntensity = 0.9
+                    if distanceToMouse < 0.2 then
+                        glowIntensity = 0.7 + (distanceToMouse / 0.2) * 0.2
+                    end
+                    p.glow.BackgroundTransparency = glowIntensity
+                    
+                    local shimmer = math.sin(tick() * 4 + p.pulsePhase) * 0.2 + 0.3
+                    p.highlight.BackgroundTransparency = shimmer
+                    
+                    p.vx = p.vx * 0.995
+                    p.vy = p.vy * 0.998
+                    
+                    p.frame.Position = UDim2.new(newX, 0, newY, 0)
+                end
+            end
+        end
+    end
+    
+    local function StartSystem()
+        if not Nexus.Particles.Enabled then return end
+        
+        UpdateGuiBounds()
+        
+        UserInputService.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                local mousePos = input.Position
+                if mousePos.X >= system.GuiBounds.MinX and mousePos.X <= system.GuiBounds.MaxX and
+                   mousePos.Y >= system.GuiBounds.MinY and mousePos.Y <= system.GuiBounds.MaxY then
+                    system.MousePosition.X = mousePos.X
+                    system.MousePosition.Y = mousePos.Y
+                end
+            end
+        end)
+        
+        task.spawn(function()
+            for i = 1, math.min(20, system.Config.MaxParticles) do
+                if system.IsDestroyed then break end
+                CreateParticle()
+                task.wait(math.random(20, 100) / 1000)
+            end
+            
+            while not system.IsDestroyed and container.Parent do
+                if #system.Particles < system.Config.MaxParticles then
+                    CreateParticle()
+                end
+                task.wait(math.random(400, 1200) / 1000)
+            end
+        end)
+        
+        task.spawn(function()
+            while not system.IsDestroyed and container.Parent do
+                pcall(UpdateParticles)
+                task.wait(1/60)
+            end
+        end)
+    end
+    
+    function system:Destroy()
+        self.IsDestroyed = true
+        for _, particle in ipairs(self.Particles) do
+            if particle.frame then
+                particle.frame:Destroy()
+            end
+        end
+        self.Particles = {}
+    end
+    
+    function system:SetEnabled(enabled)
+        if not enabled then
+            for _, particle in ipairs(self.Particles) do
+                if particle.frame then
+                    particle.frame.Visible = false
+                end
+            end
+        else
+            for _, particle in ipairs(self.Particles) do
+                if particle.frame then
+                    particle.frame.Visible = true
+                end
+            end
+        end
+    end
+    
+    StartSystem()
+    table.insert(Nexus.Particles.Systems, system)
+    return system
+end
 
-        table.insert(Particles, {
-            Frame = f,
-            VX = (math.random()-0.5)*0.002,
-            VY = (math.random()-0.5)*0.002,
-            RotSpeed = (math.random()-0.5)*2,
-            Pulse = math.random()*6.28,
-            Life = tick() + math.random(30,60),
-            OrigSize = size,
-            OrigTrans = f.BackgroundTransparency
+function Nexus.Particles:SetGlobalEnabled(enabled)
+    self.Enabled = enabled
+    for _, system in ipairs(self.Systems) do
+        system:SetEnabled(enabled)
+    end
+end
+
+-- ========================================
+-- BASE WINDOW COMPONENT
+-- ========================================
+function Nexus:CreateWindow(options)
+    local options = options or {}
+    local window = {
+        Name = options.Name or "NexusWindow",
+        Size = options.Size or UDim2.new(0, 400, 0, 500),
+        Position = options.Position or UDim2.new(0.5, -200, 0.5, -250),
+        Title = options.Title or "Nexus UI",
+        Subtitle = options.Subtitle or "",
+        EnableParticles = options.EnableParticles ~= false,
+        EnableDragging = options.EnableDragging ~= false,
+        ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift,
+        Sections = {},
+        Elements = {}
+    }
+    
+    -- Create ScreenGui
+    window.ScreenGui = Nexus.Utils.Create("ScreenGui", {
+        Name = window.Name,
+        Parent = Player.PlayerGui,
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        IgnoreGuiInset = true
+    })
+    
+    -- Main Container
+    window.MainContainer = Nexus.Utils.Create("Frame", {
+        Name = "MainContainer",
+        Size = window.Size,
+        Position = window.Position,
+        BackgroundColor3 = self.Colors.Current.Surface,
+        BackgroundTransparency = self:GetConfig("Transparency"),
+        BorderSizePixel = 0,
+        ZIndex = 1000,
+        Parent = window.ScreenGui
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, self:GetConfig("CornerRadius")),
+        Parent = window.MainContainer
+    })
+    
+    Nexus.Utils.Create("UIStroke", {
+        Color = self.Colors.Current.PinkMedium,
+        Thickness = self:GetConfig("BorderThickness"),
+        Transparency = 0.2,
+        Parent = window.MainContainer
+    })
+    
+    -- Particle Container
+    if window.EnableParticles then
+        window.ParticleContainer = Nexus.Utils.Create("Frame", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            ZIndex = 5,
+            Parent = window.MainContainer
+        })
+        
+        self.Particles:CreateSystem(window.ParticleContainer)
+    end
+    
+    -- Animated Border
+    window.AnimatedBorder = Nexus.Utils.Create("Frame", {
+        Name = "AnimatedBorder",
+        Size = UDim2.new(1, 8, 1, 8),
+        Position = UDim2.new(0, -4, 0, -4),
+        BackgroundTransparency = 1,
+        ZIndex = 999,
+        Parent = window.MainContainer
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, self:GetConfig("CornerRadius") + 4),
+        Parent = window.AnimatedBorder
+    })
+    
+    local borderStroke = Nexus.Utils.Create("UIStroke", {
+        Color = self.Colors.Current.PinkLight,
+        Thickness = 3,
+        Transparency = 0.3,
+        Parent = window.AnimatedBorder
+    })
+    
+    local borderGradient = Nexus.Utils.Create("UIGradient", {
+        Color = Nexus.Utils.CreateGradient({
+            self.Colors.Current.PinkLight,
+            self.Colors.Current.PinkMedium,
+            self.Colors.Current.PinkDark,
+            self.Colors.Current.PinkLight
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.8),
+            NumberSequenceKeypoint.new(0.2, 0.1),
+            NumberSequenceKeypoint.new(0.8, 0.1),
+            NumberSequenceKeypoint.new(1, 0.8)
+        }),
+        Parent = borderStroke
+    })
+    
+    -- Header
+    window.Header = Nexus.Utils.Create("Frame", {
+        Name = "Header",
+        Size = UDim2.new(1, 0, 0, 80),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = window.MainContainer
+    })
+    
+    window.TitleContainer = Nexus.Utils.Create("Frame", {
+        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.new(0, 20, 0, 0),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = window.Header
+    })
+    
+    window.TitleLabel = Nexus.Utils.Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0.6, 0),
+        BackgroundTransparency = 1,
+        Text = window.Title,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextScaled = true,
+        Font = Enum.Font.GothamBlack,
+        TextStrokeTransparency = 0.7,
+        TextStrokeColor3 = self.Colors.Current.PinkDark,
+        ZIndex = 1002,
+        Parent = window.TitleContainer
+    })
+    
+    Nexus.Utils.Create("UIGradient", {
+        Color = Nexus.Utils.CreateGradient({
+            self.Colors.Current.PinkLight,
+            self.Colors.Current.PinkMedium,
+            self.Colors.Current.PinkDark
+        }),
+        Rotation = 45,
+        Parent = window.TitleLabel
+    })
+    
+    if window.Subtitle ~= "" then
+        window.SubtitleLabel = Nexus.Utils.Create("TextLabel", {
+            Size = UDim2.new(1, 0, 0.4, 0),
+            Position = UDim2.new(0, 0, 0.6, 0),
+            BackgroundTransparency = 1,
+            Text = window.Subtitle,
+            TextColor3 = self.Colors.Current.TextSecondary,
+            TextSize = 14,
+            Font = Enum.Font.Gotham,
+            ZIndex = 1002,
+            Parent = window.TitleContainer
         })
     end
-
-    RunService.Heartbeat:Connect(function()
-        UpdateBounds()
-        local mp = UserInputService:GetMouseLocation()
-        if mp.X >= Bounds.MinX and mp.X <= Bounds.MaxX and mp.Y >= Bounds.MinY and mp.Y <= Bounds.MaxY then
-            MousePos = mp
-        end
-
-        for i = #Particles,1,-1 do
-            local p = Particles[i]
-            if tick() > p.Life then
-                p.Frame:Destroy()
-                table.remove(Particles,i)
-                continue
+    
+    -- Content Area
+    window.Content = Nexus.Utils.Create("Frame", {
+        Name = "Content",
+        Size = UDim2.new(1, -40, 1, -100),
+        Position = UDim2.new(0, 20, 0, 90),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = window.MainContainer
+    })
+    
+    -- Content Layout
+    window.ContentLayout = Nexus.Utils.Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 10),
+        Parent = window.Content
+    })
+    
+    -- Reopen Button
+    window.ReopenButton = Nexus.Utils.Create("ImageButton", {
+        Name = "ReopenButton",
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0, 20, 0, 20),
+        BackgroundColor3 = self.Colors.Current.Primary,
+        BorderSizePixel = 0,
+        Image = "rbxassetid://75247573479445",
+        ImageColor3 = self.Colors.Current.PinkLight,
+        ScaleType = Enum.ScaleType.Fit,
+        Visible = false,
+        ZIndex = 1010,
+        Parent = window.ScreenGui
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 15),
+        Parent = window.ReopenButton
+    })
+    
+    Nexus.Utils.Create("UIStroke", {
+        Color = self.Colors.Current.PinkLight,
+        Thickness = 2,
+        Transparency = 0.3,
+        Parent = window.ReopenButton
+    })
+    
+    -- Dragging functionality
+    if window.EnableDragging then
+        local dragging, dragInput, dragStart, startPos
+        
+        window.Header.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                dragStart = input.Position
+                startPos = window.MainContainer.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then dragging = false end
+                end)
             end
-
-            local pos = p.Frame.Position
-            local mx = (MousePos.X - Bounds.MinX) / Container.AbsoluteSize.X
-            local my = (MousePos.Y - Bounds.MinY) / Container.AbsoluteSize.Y
-            local dist = math.sqrt((pos.X.Scale - mx)^2 + (pos.Y.Scale - my)^2)
-
-            local repel = 0
-            if dist < 0.15 and dist > 0 then
-                repel = (0.15 - dist) / 0.15 * 0.08
-            end
-
-            p.VX = p.VX * 0.98 + repel * (pos.X.Scale > mx and -1 or 1) * 0.1
-            p.VY = p.VY * 0.98 + repel * (pos.Y.Scale > my and -1 or 1) * 0.1
-
-            local nx = math.clamp(pos.X.Scale + p.VX, 0, 1)
-            local ny = math.clamp(pos.Y.Scale + p.VY, 0, 1)
-            if nx ~= pos.X.Scale then p.VX *= nx == 0 or nx == 1 and -0.5 or 1 end
-            if ny ~= pos.Y.Scale then p.VY *= ny == 0 or ny == 1 and -0.5 or 1 end
-
-            p.Frame.Position = UDim2.fromScale(nx, ny)
-            p.Frame.Rotation += p.RotSpeed
-
-            local breathe = math.sin(tick()*2.5 + p.Pulse)*0.1 + 1
-            p.Frame.Size = UDim2.fromOffset(p.OrigSize * breathe, p.OrigSize * breathe)
-            p.Frame.BackgroundTransparency = math.clamp(p.OrigTrans + math.sin(tick()*3 + p.Pulse)*0.1, 0.5, 0.95)
-        end
-
-        if #Particles < 40 then Create() end
-    end)
-
-    for i = 1,20 do Create() task.wait(0.05) end
-end
-
---====================================================================--
--- NEXUS UI LIBRARY (FULLY COMPLETE)
---====================================================================--
-function Nexus:Window(options)
-    local win = {
-        Name = options.Name or "Nexus",
-        Size = options.Size or UDim2.fromOffset(620, 540),
-        Gui = Instance.new("ScreenGui"),
-        Main = Instance.new("Frame"),
-        Tabs = {},
-        SelectedTab = nil,
-        Flags = {},
-        ConfigFolder = "NexusConfigs",
-        ConfigList = {},
-    }
-    setmetatable(win, {__index = Nexus})
-
-    win.Gui.Name = "NexusUI"
-    win.Gui.ResetOnSpawn = false
-    win.Gui.Parent = CoreGui
-
-    win.Main.Size = win.Size
-    win.Main.Position = UDim2.fromScale(0.5,0.5) - UDim2.fromScale(0.5,0.5) * win.Size
-    win.Main.BackgroundColor3 = Colors.Surface
-    win.Main.BorderSizePixel = 0
-    win.Main.Parent = win.Gui
-
-    local corner = Instance.new("UICorner", win.Main); corner.CornerRadius = UDim.new(0,20)
-    local stroke = Instance.new("UIStroke", win.Main); stroke.Color = Colors.PinkMedium; stroke.Thickness = 2; stroke.Transparency = 0.2
-
-    -- Particle Background
-    local particleBg = Instance.new("Frame", win.Main)
-    particleBg.Size = UDim2.fromScale(1,1)
-    particleBg.BackgroundTransparency = 1
-    particleBg.ZIndex = 1
-    CreateParticleSystem(particleBg)
-
-    -- Animated Border
-    local animBorder = Instance.new("Frame", win.Main)
-    animBorder.Size = UDim2.new(1,8,1,8)
-    animBorder.Position = UDim2.fromOffset(-4,-4)
-    animBorder.BackgroundTransparency = 1
-    animBorder.ZIndex = 999
-    local bc = Instance.new("UICorner", animBorder); bc.CornerRadius = UDim.new(0,24)
-    local bs = Instance.new("UIStroke", animBorder); bs.Thickness = 3; bs.Transparency = 0.3
-    local bg = Instance.new("UIGradient", bs)
-    bg.Color = ColorSequence.new{Colors.PinkLight, Colors.PinkMedium, Colors.PinkDark, Colors.PinkLight}
-    bg.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0,0.8), NumberSequenceKeypoint.new(0.2,0.1), NumberSequenceKeypoint.new(0.8,0.1), NumberSequenceKeypoint.new(1,0.8)}
-    TweenService:Create(bg, TweenInfo.new(4,Enum.EasingStyle.Linear,-1), {Rotation=360}):Play()
-
-    -- Title
-    local title = Instance.new("TextLabel", win.Main)
-    title.Size = UDim2.new(1,0,0,100)
-    title.BackgroundTransparency = 1
-    title.Text = win.Name
-    title.TextColor3 = Colors.TextPrimary
-    title.Font = Enum.Font.GothamBlack
-    title.TextSize = 42
-    title.TextStrokeTransparency = 0.7
-    title.TextStrokeColor3 = Colors.PinkDark
-    local tg = Instance.new("UIGradient", title)
-    tg.Color = ColorSequence.new{Colors.PinkLight, Colors.PinkMedium, Colors.PinkDark}
-    tg.Rotation = 45
-
-    -- Tab Bar
-    local tabBar = Instance.new("Frame", win.Main)
-    tabBar.Size = UDim2.new(1,0,0,50)
-    tabBar.Position = UDim2.fromOffset(0,100)
-    tabBar.BackgroundTransparency = 1
-
-    local tabList = Instance.new("UIListLayout", tabBar)
-    tabList.FillDirection = Enum.FillDirection.Horizontal
-    tabList.Padding = UDim.new(0,10)
-    tabList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-    win.TabContainer = Instance.new("Frame", win.Main)
-    win.TabContainer.Size = UDim2.new(1,0,1,-150)
-    win.TabContainer.Position = UDim2.fromOffset(0,150)
-    win.TabContainer.BackgroundTransparency = 1
-
-    -- Draggable
-    local dragging = false
-    local dragStart, startPos
-    title.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = i.Position
-            startPos = win.Main.Position
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = i.Position - dragStart
-            win.Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
-
-    -- Tab
-    function win:Tab(name)
-        local tab = {Name = name, Columns = {}, Gui = Instance.new("ScrollingFrame")}
-        tab.Gui.Size = UDim2.fromScale(1,1)
-        tab.Gui.BackgroundTransparency = 1
-        tab.Gui.ScrollBarThickness = 0
-        tab.Gui.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        tab.Gui.Visible = false
-        tab.Gui.Parent = win.TabContainer
-
-        local btn = Instance.new("TextButton", tabBar)
-        btn.Size = UDim2.fromOffset(150,40)
-        btn.BackgroundColor3 = Colors.Primary
-        btn.Text = name
-        btn.TextColor3 = Colors.TextPrimary
-        btn.Font = Enum.Font.GothamBold
-        local c = Instance.new("UICorner", btn); c.CornerRadius = UDim.new(0,12)
-        local g = Instance.new("UIGradient", btn)
-        g.Color = ColorSequence.new{Colors.PinkDark, Colors.PinkMedium}
-        g.Rotation = 90
-
-        btn.MouseButton1Click:Connect(function()
-            if win.SelectedTab then win.SelectedTab.Gui.Visible = false end
-            tab.Gui.Visible = true
-            win.SelectedTab = tab
         end)
-
-        table.insert(win.Tabs, tab)
-        if #win.Tabs == 1 then btn.MouseButton1Click:Fire() end
-
-        function tab:Column()
-            local col = {Sections = {}, Gui = Instance.new("Frame")}
-            col.Gui.Size = UDim2.new(0.5,-10,1,0)
-            col.Gui.Position = UDim2.fromOffset(#tab.Columns * (col.Gui.Size.X.Offset + 20), 0)
-            col.Gui.BackgroundTransparency = 1
-            col.Gui.Parent = tab.Gui
-
-            local list = Instance.new("UIListLayout", col.Gui)
-            list.Padding = UDim.new(0,15)
-            list.SortOrder = Enum.SortOrder.LayoutOrder
-
-            table.insert(tab.Columns, col)
-
-            function col:Section(title)
-                local sec = {Elements = Instance.new("Frame")}
-                local container = Instance.new("Frame", col.Gui)
-                container.Size = UDim2.new(1,0,0,50)
-                container.BackgroundColor3 = Colors.Primary
-                container.AutomaticSize = Enum.AutomaticSize.Y
-
-                local c = Instance.new("UICorner", container); c.CornerRadius = UDim.new(0,12)
-                local t = Instance.new("TextLabel", container)
-                t.Text = title
-                t.BackgroundTransparency = 1
-                t.TextColor3 = Colors.TextPrimary
-                t.Font = Enum.Font.GothamBold
-                t.TextSize = 18
-                t.Size = UDim2.new(1,0,0,40)
-                t.Position = UDim2.fromOffset(0,5)
-
-                sec.Elements.Size = UDim2.new(1,-20,0,0)
-                sec.Elements.Position = UDim2.fromOffset(10,50)
-                sec.Elements.BackgroundTransparency = 1
-                sec.Elements.AutomaticSize = Enum.AutomaticSize.Y
-                sec.Elements.Parent = container
-
-                local list = Instance.new("UIListLayout", sec.Elements)
-                list.Padding = UDim.new(0,10)
-                list.SortOrder = Enum.SortOrder.LayoutOrder
-
-                -- Toggle
-                function sec:Toggle(opts)
-                    local value = opts.Default or false
-                    win.Flags[opts.Flag or opts.Name] = value
-
-                    local btn = Instance.new("TextButton", sec.Elements)
-                    btn.Size = UDim2.new(1,0,0,40)
-                    btn.BackgroundColor3 = Colors.Primary
-                    btn.Text = "  "..(opts.Name or "Toggle")
-                    btn.TextColor3 = Colors.TextPrimary
-                    btn.TextXAlignment = Enum.TextXAlignment.Left
-                    btn.Font = Enum.Font.Gotham
-
-                    local toggle = Instance.new("Frame", btn)
-                    toggle.Size = UDim2.fromOffset(50,24)
-                    toggle.Position = UDim2.new(1,-65,0.5,-12)
-                    toggle.BackgroundColor3 = value and Colors.Success or Color3.fromRGB(60,60,60)
-                    local tc = Instance.new("UICorner", toggle); tc.CornerRadius = UDim.new(1,0)
-
-                    local circle = Instance.new("Frame", toggle)
-                    circle.Size = UDim2.fromOffset(18,18)
-                    circle.Position = value and UDim2.new(1,-22,0.5,-9) or UDim2.new(0,4,0.5,-9)
-                    circle.BackgroundColor3 = Color3.new(1,1,1)
-                    local cc = Instance.new("UICorner", circle); cc.CornerRadius = UDim.new(1,0)
-
-                    btn.MouseButton1Click:Connect(function()
-                        value = not value
-                        win.Flags[opts.Flag or opts.Name] = value
-                        TweenService:Create(toggle, TweenInfo.new(0.2), {BackgroundColor3 = value and Colors.Success or Color3.fromRGB(60,60,60)}):Play()
-                        TweenService:Create(circle, TweenInfo.new(0.2), {Position = value and UDim2.new(1,-22,0.5,-9) or UDim2.new(0,4,0.5,-9)}):Play()
-                        if opts.Callback then opts.Callback(value) end
-                    end)
-                end
-
-                -- Slider
-                function sec:Slider(opts)
-                    local value = opts.Default or opts.Min or 0
-                    win.Flags[opts.Flag or opts.Name] = value
-
-                    local frame = Instance.new("Frame", sec.Elements)
-                    frame.Size = UDim2.new(1,0,0,60)
-                    frame.BackgroundTransparency = 1
-
-                    local name = Instance.new("TextLabel", frame)
-                    name.Text = opts.Name or "Slider"
-                    name.TextColor3 = Colors.TextPrimary
-                    name.BackgroundTransparency = 1
-                    name.TextXAlignment = Enum.TextXAlignment.Left
-                    name.Size = UDim2.new(1,0,0.5,0)
-                    name.Position = UDim2.fromOffset(10,0)
-
-                    local bar = Instance.new("Frame", frame)
-                    bar.Size = UDim2.new(1,-20,0,8)
-                    bar.Position = UDim2.fromOffset(10,30)
-                    bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
-                    local bc = Instance.new("UICorner", bar); bc.CornerRadius = UDim.new(1,0)
-
-                    local fill = Instance.new("Frame", bar)
-                    fill.BackgroundColor3 = Colors.PinkMedium
-                    local fc = Instance.new("UICorner", fill); fc.CornerRadius = UDim.new(1,0)
-
-                    local valText = Instance.new("TextLabel", frame)
-                    valText.Position = UDim2.fromOffset(10,40)
-                    valText.TextColor3 = Colors.TextSecondary
-                    valText.BackgroundTransparency = 1
-
-                    local function update(v)
-                        value = math.clamp(v, opts.Min, opts.Max)
-                        local percent = (value - opts.Min)/(opts.Max - opts.Min)
-                        fill.Size = UDim2.new(percent,0,1,0)
-                        valText.Text = string.format("%.2f", value)..(opts.Suffix or "")
-                        win.Flags[opts.Flag or opts.Name] = value
-                        if opts.Callback then opts.Callback(value) end
-                    end
-                    update(value)
-
-                    local dragging = false
-                    bar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
-                    UserInputService.InputChanged:Connect(function(i)
-                        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-                            local percent = math.clamp((Mouse.X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X, 0,1)
-                            update(opts.Min + (opts.Max-opts.Min)*percent)
-                        end
-                    end)
-                    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-                end
-
-                -- Dropdown
-                function sec:Dropdown(opts)
-                    local items = opts.Items or {}
-                    local multi = opts.Multi or false
-                    local selected = multi and (opts.Default or {}) or (opts.Default or items[1])
-                    win.Flags[opts.Flag or opts.Name] = selected
-
-                    local dropdown = Instance.new("TextButton", sec.Elements)
-                    dropdown.Size = UDim2.new(1,0,0,40)
-                    dropdown.BackgroundColor3 = Colors.Primary
-                    dropdown.Text = "  "..(opts.Name or "Dropdown").." : "..tostring(selected)
-                    dropdown.TextColor3 = Colors.TextPrimary
-                    dropdown.TextXAlignment = Enum.TextXAlignment.Left
-
-                    local list = Instance.new("Frame")
-                    list.Size = UDim2.new(1,0,0,0)
-                    list.Position = UDim2.fromOffset(0,40)
-                    list.BackgroundColor3 = Colors.Primary
-                    list.Visible = false
-                    list.Parent = dropdown
-                    local lc = Instance.new("UICorner", list); lc.CornerRadius = UDim.new(0,12)
-                    local ll = Instance.new("UIListLayout", list)
-                    ll.Padding = UDim.new(0,5)
-
-                    for _, item in ipairs(items) do
-                        local btn = Instance.new("TextButton", list)
-                        btn.Size = UDim2.new(1,0,0,30)
-                        btn.BackgroundTransparency = 1
-                        btn.Text = "  "..tostring(item)
-                        btn.TextColor3 = Colors.TextSecondary
-                        btn.TextXAlignment = Enum.TextXAlignment.Left
-
-                        btn.MouseButton1Click:Connect(function()
-                            if multi then
-                                local found = table.find(selected, item)
-                                if found then table.remove(selected, found) else table.insert(selected, item) end
-                            else
-                                selected = item
-                                list.Visible = false
-                            end
-                            dropdown.Text = "  "..(opts.Name or "Dropdown").." : "..(multi and #selected.. " selected" or tostring(selected))
-                            win.Flags[opts.Flag or opts.Name] = selected
-                            if opts.Callback then opts.Callback(selected) end
-                        end)
-                    end
-
-                    dropdown.MouseButton1Click:Connect(function()
-                        list.Visible = not list.Visible
-                        list.Size = UDim2.new(1,0,0, #items * 35)
-                    end)
-                end
-
-                -- Keybind
-                function sec:Keybind(opts)
-                    local key = opts.Default or Enum.KeyCode.Unknown
-                    win.Flags[opts.Flag or opts.Name] = key
-
-                    local bind = Instance.new("TextButton", sec.Elements)
-                    bind.Size = UDim2.new(1,0,0,40)
-                    bind.BackgroundColor3 = Colors.Primary
-                    bind.Text = "  "..(opts.Name or "Keybind").." [ "..(key == Enum.KeyCode.Unknown and "None" or key.Name).." ]"
-                    bind.TextColor3 = Colors.TextPrimary
-                    bind.TextXAlignment = Enum.TextXAlignment.Left
-
-                    bind.MouseButton1Click:Connect(function()
-                        bind.Text = "  "..(opts.Name or "Keybind").." [ ... ]"
-                        local conn
-                        conn = UserInputService.InputBegan:Connect(function(i)
-                            if i.KeyCode ~= Enum.KeyCode.Unknown then
-                                key = i.KeyCode
-                                bind.Text = "  "..(opts.Name or "Keybind").." [ "..key.Name.." ]"
-                                win.Flags[opts.Flag or opts.Name] = key
-                                if opts.Callback then opts.Callback(key) end
-                                conn:Disconnect()
-                            end
-                        end)
-                    end)
-                end
-
-                -- Colorpicker (FULL HSV + Alpha)
-                function sec:Colorpicker(opts)
-                    local color = opts.Default or Color3.fromRGB(255,105,180)
-                    local alpha = opts.Alpha or 1
-                    win.Flags[opts.Flag or opts.Name] = {Color = color, Alpha = alpha}
-
-                    local picker = Instance.new("TextButton", sec.Elements)
-                    picker.Size = UDim2.new(1,0,0,40)
-                    picker.BackgroundColor3 = Colors.Primary
-                    picker.Text = "  "..(opts.Name or "Colorpicker")
-                    picker.TextColor3 = Colors.TextPrimary
-                    picker.TextXAlignment = Enum.TextXAlignment.Left
-
-                    local preview = Instance.new("Frame", picker)
-                    preview.Size = UDim2.fromOffset(30,30)
-                    preview.Position = UDim2.new(1,-70,0.5,-15)
-                    preview.BackgroundColor3 = color
-                    local pc = Instance.new("UICorner", preview); pc.CornerRadius = UDim.new(0,8)
-
-                    local h,s,v = color:ToHSV()
-
-                    local holder = Instance.new("Frame")
-                    holder.Size = UDim2.fromOffset(200,220)
-                    holder.BackgroundColor3 = Colors.Surface
-                    holder.Visible = false
-                    holder.Parent = win.Gui
-
-                    local hue = Instance.new("Frame", holder)
-                    hue.Size = UDim2.new(1,0,0,20)
-                    hue.Position = UDim2.fromOffset(0,180)
-                    hue.BackgroundColor3 = Color3.new(1,1,1)
-                    local hg = Instance.new("UIGradient", hue)
-                    hg.Color = ColorSequence.new{
-                        ColorSequenceKeypoint.new(0, Color3.fromHSV(0,1,1)),
-                        ColorSequenceKeypoint.new(1/6, Color3.fromHSV(1/6,1,1)),
-                        ColorSequenceKeypoint.new(2/6, Color3.fromHSV(2/6,1,1)),
-                        ColorSequenceKeypoint.new(3/6, Color3.fromHSV(3/6,1,1)),
-                        ColorSequenceKeypoint.new(4/6, Color3.fromHSV(4/6,1,1)),
-                        ColorSequenceKeypoint.new(5/6, Color3.fromHSV(5/6,1,1)),
-                        ColorSequenceKeypoint.new(1, Color3.fromHSV(1,1,1)),
-                    }
-
-                    local satval = Instance.new("Frame", holder)
-                    satval.Size = UDim2.new(1,0,0,160)
-                    satval.BackgroundColor3 = Color3.fromHSV(h,1,1)
-                    local svg = Instance.new("UIGradient", satval)
-                    svg.Color = ColorSequence.new{Color3.new(1,1,1), Color3.new(1,1,1)}
-                    svg.Transparency = NumberSequence.new{0,1}
-                    local svg2 = Instance.new("UIGradient", satval)
-                    svg2.Color = ColorSequence.new{Color3.new(0,0,0), Color3.new(0,0,0)}
-                    svg2.Transparency = NumberSequence.new{1,0}
-                    svg2.Rotation = 90
-
-                    local pickerDot = Instance.new("Frame", satval)
-                    pickerDot.Size = UDim2.fromOffset(12,12)
-                    pickerDot.BackgroundColor3 = Color3.new(1,1,1)
-                    pickerDot.BackgroundTransparency = 0.5
-                    local pdc = Instance.new("UICorner", pickerDot); pdc.CornerRadius = UDim.new(1,0)
-                    local pds = Instance.new("UIStroke", pickerDot); pds.Color = Color3.new(0,0,0)
-
-                    picker.MouseButton1Click:Connect(function()
-                        holder.Visible = not holder.Visible
-                        holder.Position = UDim2.fromOffset(Mouse.X, Mouse.Y)
-                    end)
-
-                    -- Full dragging logic for HSV + Alpha (simplified but works)
-                end
-
-                -- Textbox
-                function sec:Textbox(opts)
-                    local text = opts.Default or ""
-                    win.Flags[opts.Flag or opts.Name] = text
-
-                    local box = Instance.new("TextBox", sec.Elements)
-                    box.Size = UDim2.new(1,0,0,40)
-                    box.BackgroundColor3 = Colors.Primary
-                    box.PlaceholderText = opts.Placeholder or "Enter text..."
-                    box.Text = text
-                    box.TextColor3 = Colors.TextPrimary
-                    box.TextXAlignment = Enum.TextXAlignment.Left
-
-                    box.FocusLost:Connect(function()
-                        win.Flags[opts.Flag or opts.Name] = box.Text
-                        if opts.Callback then opts.Callback(box.Text) end
-                    end)
-                end
-
-                -- Button
-                function sec:Button(opts)
-                    local btn = Instance.new("TextButton", sec.Elements)
-                    btn.Size = UDim2.new(1,0,0,40)
-                    btn.BackgroundColor3 = Colors.PinkMedium
-                    btn.Text = opts.Name or "Button"
-                    btn.TextColor3 = Colors.TextPrimary
-                    btn.Font = Enum.Font.GothamBold
-
-                    btn.MouseButton1Click:Connect(function()
-                        if opts.Callback then opts.Callback() end
-                    end)
-                end
-
-                return sec
+        
+        window.Header.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then 
+                dragInput = input 
             end
-
-            return col
-        end
-
-        return tab
+        end)
+        
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and input == dragInput then
+                local delta = input.Position - dragStart
+                window.MainContainer.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
     end
-
-    return win
+    
+    -- Window methods
+    function window:SetVisible(visible)
+        self.MainContainer.Visible = visible
+        self.ReopenButton.Visible = not visible
+    end
+    
+    function window:Toggle()
+        self:SetVisible(not self.MainContainer.Visible)
+    end
+    
+    function window:Destroy()
+        self.ScreenGui:Destroy()
+        if self.ParticleSystem then
+            self.ParticleSystem:Destroy()
+        end
+    end
+    
+    function window:AddSection(options)
+        local section = self:CreateSection(options)
+        table.insert(self.Sections, section)
+        return section
+    end
+    
+    -- Start animations
+    if self:GetConfig("EnableAnimations") then
+        local borderTween = TweenService:Create(borderGradient, 
+            TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
+            {Rotation = 360})
+        borderTween:Play()
+        
+        -- Entrance animation
+        window.MainContainer.Size = UDim2.new(0, 0, 0, 0)
+        window.MainContainer.BackgroundTransparency = 1
+        
+        Nexus.Utils.Tween(window.MainContainer, {
+            Size = window.Size,
+            BackgroundTransparency = self:GetConfig("Transparency")
+        }, 0.5, Enum.EasingStyle.Back)
+    end
+    
+    -- Toggle keybind
+    if window.ToggleKey then
+        UserInputService.InputBegan:Connect(function(input)
+            if input.KeyCode == window.ToggleKey then
+                window:Toggle()
+            end
+        end)
+    end
+    
+    return window
 end
 
-return Nexus
+-- ========================================
+-- SECTION COMPONENT
+-- ========================================
+function Nexus:CreateSection(options)
+    local options = options or {}
+    local section = {
+        Name = options.Name or "Section",
+        Title = options.Title or "Section",
+        LayoutOrder = options.LayoutOrder or 1,
+        Elements = {}
+    }
+    
+    section.Container = Nexus.Utils.Create("Frame", {
+        Name = section.Name,
+        Size = UDim2.new(1, 0, 0, options.Height or 200),
+        BackgroundTransparency = 1,
+        LayoutOrder = section.LayoutOrder,
+        Parent = options.Parent or error("Section needs a parent")
+    })
+    
+    -- Section Title
+    section.TitleLabel = Nexus.Utils.Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        Text = section.Title,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 18,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 1002,
+        Parent = section.Container
+    })
+    
+    -- Elements Container
+    section.ElementsContainer = Nexus.Utils.Create("Frame", {
+        Size = UDim2.new(1, 0, 1, -40),
+        Position = UDim2.new(0, 0, 0, 40),
+        BackgroundTransparency = 1,
+        Parent = section.Container
+    })
+    
+    section.ElementsLayout = Nexus.Utils.Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 8),
+        Parent = section.ElementsContainer
+    })
+    
+    function section:AddButton(options)
+        return Nexus:CreateButton(options, self.ElementsContainer)
+    end
+    
+    function section:AddToggle(options)
+        return Nexus:CreateToggle(options, self.ElementsContainer)
+    end
+    
+    function section:AddSlider(options)
+        return Nexus:CreateSlider(options, self.ElementsContainer)
+    end
+    
+    function section:AddDropdown(options)
+        return Nexus:CreateDropdown(options, self.ElementsContainer)
+    end
+    
+    function section:AddLabel(options)
+        return Nexus:CreateLabel(options, self.ElementsContainer)
+    end
+    
+    function section:AddTextInput(options)
+        return Nexus:CreateTextInput(options, self.ElementsContainer)
+    end
+    
+    function section:AddKeybind(options)
+        return Nexus:CreateKeybind(options, self.ElementsContainer)
+    end
+    
+    function section:AddSeparator()
+        return Nexus:CreateSeparator(self.ElementsContainer)
+    end
+    
+    return section
+end
+
+-- ========================================
+-- BUTTON COMPONENT
+-- ========================================
+function Nexus:CreateButton(options, parent)
+    local options = options or {}
+    local button = {
+        Name = options.Name or "Button",
+        Text = options.Text or "Button",
+        Size = options.Size or UDim2.new(1, 0, 0, 40),
+        Callback = options.Callback or function() end
+    }
+    
+    button.Container = Nexus.Utils.Create("TextButton", {
+        Name = button.Name,
+        Size = button.Size,
+        BackgroundColor3 = self.Colors.Current.Primary,
+        BorderSizePixel = 0,
+        Text = button.Text,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.GothamMedium,
+        AutoButtonColor = false,
+        Parent = parent
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 8),
+        Parent = button.Container
+    })
+    
+    local buttonGradient = Nexus.Utils.Create("UIGradient", {
+        Color = Nexus.Utils.CreateGradient({
+            self.Colors.Current.PinkDark,
+            self.Colors.Current.PinkMedium
+        }),
+        Rotation = 90,
+        Parent = button.Container
+    })
+    
+    -- Hover effects
+    button.Container.MouseEnter:Connect(function()
+        Nexus.Utils.Tween(button.Container, {
+            BackgroundColor3 = self.Colors.Current.HoverPrimary
+        })
+    end)
+    
+    button.Container.MouseLeave:Connect(function()
+        Nexus.Utils.Tween(button.Container, {
+            BackgroundColor3 = self.Colors.Current.Primary
+        })
+    end)
+    
+    button.Container.MouseButton1Click:Connect(function()
+        if self:GetConfig("EnableAnimations") then
+            Nexus.Utils.Tween(button.Container, {
+                Size = button.Size + UDim2.new(0, -4, 0, -4)
+            }, 0.1):Wait()
+            Nexus.Utils.Tween(button.Container, {
+                Size = button.Size
+            }, 0.1)
+        end
+        button.Callback()
+    end)
+    
+    function button:SetText(text)
+        self.Text = text
+        self.Container.Text = text
+    end
+    
+    function button:SetCallback(callback)
+        self.Callback = callback
+    end
+    
+    return button
+end
+
+-- ========================================
+-- TOGGLE COMPONENT
+-- ========================================
+function Nexus:CreateToggle(options, parent)
+    local options = options or {}
+    local toggle = {
+        Name = options.Name or "Toggle",
+        Text = options.Text or "Toggle",
+        Default = options.Default or false,
+        Callback = options.Callback or function() end,
+        Value = options.Default or false
+    }
+    
+    toggle.Container = Nexus.Utils.Create("Frame", {
+        Name = toggle.Name,
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        Parent = parent
+    })
+    
+    toggle.Label = Nexus.Utils.Create("TextLabel", {
+        Size = UDim2.new(0.7, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = toggle.Text,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = toggle.Container
+    })
+    
+    toggle.ToggleButton = Nexus.Utils.Create("TextButton", {
+        Size = UDim2.new(0, 50, 0, 25),
+        Position = UDim2.new(0.7, 0, 0, 2.5),
+        BackgroundColor3 = toggle.Value and self.Colors.Current.Success or self.Colors.Current.Primary,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = toggle.Container
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 12),
+        Parent = toggle.ToggleButton
+    })
+    
+    toggle.ToggleKnob = Nexus.Utils.Create("Frame", {
+        Size = UDim2.new(0, 21, 0, 21),
+        Position = UDim2.new(0, toggle.Value and 27 or 2, 0, 2),
+        BackgroundColor3 = self.Colors.Current.TextPrimary,
+        BorderSizePixel = 0,
+        Parent = toggle.ToggleButton
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 10),
+        Parent = toggle.ToggleKnob
+    })
+    
+    toggle.ToggleButton.MouseButton1Click:Connect(function()
+        toggle.Value = not toggle.Value
+        
+        Nexus.Utils.Tween(toggle.ToggleButton, {
+            BackgroundColor3 = toggle.Value and self.Colors.Current.Success or self.Colors.Current.Primary
+        })
+        
+        Nexus.Utils.Tween(toggle.ToggleKnob, {
+            Position = UDim2.new(0, toggle.Value and 27 or 2, 0, 2)
+        })
+        
+        toggle.Callback(toggle.Value)
+    end)
+    
+    function toggle:SetValue(value)
+        self.Value = value
+        self.ToggleButton.BackgroundColor3 = value and self.Colors.Current.Success or self.Colors.Current.Primary
+        self.ToggleKnob.Position = UDim2.new(0, value and 27 or 2, 0, 2)
+    end
+    
+    return toggle
+end
+
+-- ========================================
+-- SLIDER COMPONENT
+-- ========================================
+function Nexus:CreateSlider(options, parent)
+    local options = options or {}
+    local slider = {
+        Name = options.Name or "Slider",
+        Text = options.Text or "Slider",
+        Min = options.Min or 0,
+        Max = options.Max or 100,
+        Default = options.Default or 50,
+        Callback = options.Callback or function() end,
+        Value = options.Default or 50
+    }
+    
+    slider.Container = Nexus.Utils.Create("Frame", {
+        Name = slider.Name,
+        Size = UDim2.new(1, 0, 0, 60),
+        BackgroundTransparency = 1,
+        Parent = parent
+    })
+    
+    slider.Label = Nexus.Utils.Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1,
+        Text = slider.Text .. ": " .. slider.Value,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = slider.Container
+    })
+    
+    slider.SliderTrack = Nexus.Utils.Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 20),
+        Position = UDim2.new(0, 0, 0, 30),
+        BackgroundColor3 = self.Colors.Current.Primary,
+        BorderSizePixel = 0,
+        Parent = slider.Container
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 10),
+        Parent = slider.SliderTrack
+    })
+    
+    slider.SliderFill = Nexus.Utils.Create("Frame", {
+        Size = UDim2.new((slider.Value - slider.Min) / (slider.Max - slider.Min), 0, 1, 0),
+        BackgroundColor3 = self.Colors.Current.PinkMedium,
+        BorderSizePixel = 0,
+        Parent = slider.SliderTrack
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 10),
+        Parent = slider.SliderFill
+    })
+    
+    slider.SliderButton = Nexus.Utils.Create("TextButton", {
+        Size = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new((slider.Value - slider.Min) / (slider.Max - slider.Min), -12, 0, -2),
+        BackgroundColor3 = self.Colors.Current.TextPrimary,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = slider.SliderTrack
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 12),
+        Parent = slider.SliderButton
+    })
+    
+    local dragging = false
+    
+    local function updateSlider(value)
+        local percent = math.clamp((value - slider.Min) / (slider.Max - slider.Min), 0, 1)
+        slider.Value = math.floor(value)
+        slider.Label.Text = slider.Text .. ": " .. slider.Value
+        slider.SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+        slider.SliderButton.Position = UDim2.new(percent, -12, 0, -2)
+        slider.Callback(slider.Value)
+    end
+    
+    slider.SliderButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+    
+    slider.SliderButton.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = input.Position
+            local sliderAbsolutePos = slider.SliderTrack.AbsolutePosition
+            local sliderAbsoluteSize = slider.SliderTrack.AbsoluteSize
+            local relativeX = (mousePos.X - sliderAbsolutePos.X) / sliderAbsoluteSize.X
+            local value = slider.Min + (slider.Max - slider.Min) * math.clamp(relativeX, 0, 1)
+            updateSlider(value)
+        end
+    end)
+    
+    function slider:SetValue(value)
+        updateSlider(math.clamp(value, self.Min, self.Max))
+    end
+    
+    return slider
+end
+
+-- ========================================
+-- DROPDOWN COMPONENT
+-- ========================================
+function Nexus:CreateDropdown(options, parent)
+    local options = options or {}
+    local dropdown = {
+        Name = options.Name or "Dropdown",
+        Text = options.Text or "Dropdown",
+        Options = options.Options or {"Option 1", "Option 2"},
+        Default = options.Default or options.Options[1],
+        Callback = options.Callback or function() end,
+        Value = options.Default or options.Options[1],
+        IsOpen = false
+    }
+    
+    dropdown.Container = Nexus.Utils.Create("Frame", {
+        Name = dropdown.Name,
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        Parent = parent
+    })
+    
+    dropdown.Label = Nexus.Utils.Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        Text = dropdown.Text,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = dropdown.Container
+    })
+    
+    dropdown.MainButton = Nexus.Utils.Create("TextButton", {
+        Size = UDim2.new(0.4, 0, 1, 0),
+        Position = UDim2.new(0.6, 0, 0, 0),
+        BackgroundColor3 = self.Colors.Current.Primary,
+        BorderSizePixel = 0,
+        Text = dropdown.Value,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 12,
+        Font = Enum.Font.Gotham,
+        AutoButtonColor = false,
+        Parent = dropdown.Container
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = dropdown.MainButton
+    })
+    
+    dropdown.OptionsFrame = Nexus.Utils.Create("ScrollingFrame", {
+        Size = UDim2.new(0.4, 0, 0, 0),
+        Position = UDim2.new(0.6, 0, 1, 5),
+        BackgroundColor3 = self.Colors.Current.Surface,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Visible = false,
+        Parent = dropdown.Container
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = dropdown.OptionsFrame
+    })
+    
+    Nexus.Utils.Create("UIStroke", {
+        Color = self.Colors.Current.Border,
+        Thickness = 1,
+        Parent = dropdown.OptionsFrame
+    })
+    
+    dropdown.OptionsLayout = Nexus.Utils.Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = dropdown.OptionsFrame
+    })
+    
+    local function updateOptions()
+        for _, option in ipairs(dropdown.Options) do
+            local optionButton = Nexus.Utils.Create("TextButton", {
+                Size = UDim2.new(1, 0, 0, 25),
+                BackgroundColor3 = self.Colors.Current.Primary,
+                BorderSizePixel = 0,
+                Text = option,
+                TextColor3 = self.Colors.Current.TextPrimary,
+                TextSize = 12,
+                Font = Enum.Font.Gotham,
+                AutoButtonColor = false,
+                Parent = dropdown.OptionsFrame
+            })
+            
+            optionButton.MouseButton1Click:Connect(function()
+                dropdown.Value = option
+                dropdown.MainButton.Text = option
+                dropdown.Callback(option)
+                dropdown:Close()
+            end)
+            
+            optionButton.MouseEnter:Connect(function()
+                Nexus.Utils.Tween(optionButton, {
+                    BackgroundColor3 = self.Colors.Current.HoverPrimary
+                })
+            end)
+            
+            optionButton.MouseLeave:Connect(function()
+                Nexus.Utils.Tween(optionButton, {
+                    BackgroundColor3 = self.Colors.Current.Primary
+                })
+            end)
+        end
+        
+        dropdown.OptionsFrame.CanvasSize = UDim2.new(0, 0, 0, #dropdown.Options * 25)
+    end
+    
+    function dropdown:Open()
+        self.IsOpen = true
+        self.OptionsFrame.Visible = true
+        Nexus.Utils.Tween(self.OptionsFrame, {
+            Size = UDim2.new(0.4, 0, 0, math.min(#self.Options * 25, 125))
+        })
+    end
+    
+    function dropdown:Close()
+        self.IsOpen = false
+        Nexus.Utils.Tween(self.OptionsFrame, {
+            Size = UDim2.new(0.4, 0, 0, 0)
+        }):Wait()
+        self.OptionsFrame.Visible = false
+    end
+    
+    function dropdown:Toggle()
+        if self.IsOpen then
+            self:Close()
+        else
+            self:Open()
+        end
+    end
+    
+    function dropdown:SetOptions(newOptions)
+        self.Options = newOptions
+        self.OptionsFrame:ClearAllChildren()
+        updateOptions()
+    end
+    
+    dropdown.MainButton.MouseButton1Click:Connect(function()
+        dropdown:Toggle()
+    end)
+    
+    updateOptions()
+    
+    return dropdown
+end
+
+-- ========================================
+-- LABEL COMPONENT
+-- ========================================
+function Nexus:CreateLabel(options, parent)
+    local options = options or {}
+    local label = {
+        Name = options.Name or "Label",
+        Text = options.Text or "Label",
+        TextSize = options.TextSize or 14,
+        TextColor = options.TextColor or self.Colors.Current.TextPrimary,
+        TextXAlignment = options.TextXAlignment or Enum.TextXAlignment.Left
+    }
+    
+    label.Container = Nexus.Utils.Create("TextLabel", {
+        Name = label.Name,
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1,
+        Text = label.Text,
+        TextColor3 = label.TextColor,
+        TextSize = label.TextSize,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = label.TextXAlignment,
+        Parent = parent
+    })
+    
+    function label:SetText(text)
+        self.Text = text
+        self.Container.Text = text
+    end
+    
+    return label
+end
+
+-- ========================================
+-- TEXT INPUT COMPONENT
+-- ========================================
+function Nexus:CreateTextInput(options, parent)
+    local options = options or {}
+    local input = {
+        Name = options.Name or "TextInput",
+        Placeholder = options.Placeholder or "Enter text...",
+        Text = options.Text or "",
+        Callback = options.Callback or function() end
+    }
+    
+    input.Container = Nexus.Utils.Create("Frame", {
+        Name = input.Name,
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        Parent = parent
+    })
+    
+    input.TextBox = Nexus.Utils.Create("TextBox", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = self.Colors.Current.Primary,
+        BorderSizePixel = 0,
+        Text = input.Text,
+        PlaceholderText = input.Placeholder,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        PlaceholderColor3 = self.Colors.Current.TextSecondary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        Parent = input.Container
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = input.TextBox
+    })
+    
+    input.TextBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            input.Text = input.TextBox.Text
+            input.Callback(input.Text)
+        end
+    end)
+    
+    function input:SetText(text)
+        self.Text = text
+        self.TextBox.Text = text
+    end
+    
+    return input
+end
+
+-- ========================================
+-- KEYBIND COMPONENT
+-- ========================================
+function Nexus:CreateKeybind(options, parent)
+    local options = options or {}
+    local keybind = {
+        Name = options.Name or "Keybind",
+        Text = options.Text or "Keybind",
+        Default = options.Default or Enum.KeyCode.RightShift,
+        Callback = options.Callback or function() end,
+        Value = options.Default or Enum.KeyCode.RightShift,
+        Listening = false
+    }
+    
+    keybind.Container = Nexus.Utils.Create("Frame", {
+        Name = keybind.Name,
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        Parent = parent
+    })
+    
+    keybind.Label = Nexus.Utils.Create("TextLabel", {
+        Size = UDim2.new(0.7, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = keybind.Text,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = keybind.Container
+    })
+    
+    keybind.KeyButton = Nexus.Utils.Create("TextButton", {
+        Size = UDim2.new(0.25, 0, 1, 0),
+        Position = UDim2.new(0.75, 0, 0, 0),
+        BackgroundColor3 = self.Colors.Current.Primary,
+        BorderSizePixel = 0,
+        Text = keybind.Value.Name,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 12,
+        Font = Enum.Font.Gotham,
+        AutoButtonColor = false,
+        Parent = keybind.Container
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = keybind.KeyButton
+    })
+    
+    keybind.KeyButton.MouseButton1Click:Connect(function()
+        keybind.Listening = true
+        keybind.KeyButton.Text = "..."
+        keybind.KeyButton.BackgroundColor3 = self.Colors.Current.Warning
+        
+        local connection
+        connection = UserInputService.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                keybind.Value = input.KeyCode
+                keybind.KeyButton.Text = input.KeyCode.Name
+                keybind.KeyButton.BackgroundColor3 = self.Colors.Current.Primary
+                keybind.Listening = false
+                connection:Disconnect()
+                keybind.Callback(input.KeyCode)
+            end
+        end)
+    end)
+    
+    function keybind:SetKey(keyCode)
+        self.Value = keyCode
+        self.KeyButton.Text = keyCode.Name
+    end
+    
+    return keybind
+end
+
+-- ========================================
+-- SEPARATOR COMPONENT
+-- ========================================
+function Nexus:CreateSeparator(parent)
+    local separator = {}
+    
+    separator.Container = Nexus.Utils.Create("Frame", {
+        Name = "Separator",
+        Size = UDim2.new(1, 0, 0, 1),
+        BackgroundColor3 = self.Colors.Current.Border,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+    
+    return separator
+end
+
+-- ========================================
+-- INITIALIZE LIBRARY
+-- ========================================
+function Nexus:Init()
+    self:LoadConfig()
+    return self
+end
+
+-- Initialize the library
+return Nexus:Init()
