@@ -270,13 +270,13 @@ function NexusUI:StartParticleSystem(container)
     task.spawn(function()
         for i = 1, 20 do
             if self.ParticleState.IsDestroyed then break end
-            self:CreateParticle(container)
+            NexusUIParticle(container)
             task.wait(math.random(20, 100) / 1000)
         end
         
         while not self.ParticleState.IsDestroyed and container.Parent do
             if #self.ParticleState.Particles < 40 then
-                self:CreateParticle(container)
+                NexusUIParticle(container)
             end
             task.wait(math.random(400, 1200) / 1000)
         end
@@ -306,7 +306,7 @@ function NexusUI:Create(className, properties)
 end
 
 function NexusUI:CreateLabel(properties)
-    local label = self:Create('TextLabel', {
+    local label = NexusUI('TextLabel', {
         BackgroundTransparency = 1,
         Font = Enum.Font.Gotham,
         TextColor3 = self.Colors.TextPrimary,
@@ -372,7 +372,7 @@ function NexusUI:CreateWindow(config)
     }
     
     -- Create ScreenGui
-    local screenGui = self:Create("ScreenGui", {
+    local screenGui = NexusUI("ScreenGui", {
         Name = "NexusUI",
         Parent = CoreGui,
         ResetOnSpawn = false,
@@ -380,7 +380,7 @@ function NexusUI:CreateWindow(config)
     })
     
     -- Main Container
-    local mainContainer = self:Create("Frame", {
+    local mainContainer = NexusUI("Frame", {
         Name = "MainContainer",
         Size = config.Size or UDim2.new(0, 550, 0, 400),
         Position = config.Position or UDim2.new(0.5, -275, 0.5, -200),
@@ -391,12 +391,12 @@ function NexusUI:CreateWindow(config)
         Parent = screenGui
     })
     
-    local corner = self:Create("UICorner", {
+    local corner = NexusUI("UICorner", {
         CornerRadius = UDim.new(0, 20),
         Parent = mainContainer
     })
     
-    local stroke = self:Create("UIStroke", {
+    local stroke = NexusUI("UIStroke", {
         Color = self.Colors.PinkMedium,
         Thickness = 2,
         Transparency = 0.2,
@@ -404,7 +404,7 @@ function NexusUI:CreateWindow(config)
     })
     
     -- Particle Container
-    local particleContainer = self:Create("Frame", {
+    local particleContainer = NexusUI("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         ZIndex = 5,
@@ -412,7 +412,7 @@ function NexusUI:CreateWindow(config)
     })
     
     -- Animated Border
-    local animatedBorder = self:Create("Frame", {
+    local animatedBorder = NexusUI("Frame", {
         Name = "AnimatedBorder",
         Size = UDim2.new(1, 8, 1, 8),
         Position = UDim2.new(0, -4, 0, -4),
@@ -421,19 +421,19 @@ function NexusUI:CreateWindow(config)
         Parent = mainContainer
     })
     
-    local borderCorner = self:Create("UICorner", {
+    local borderCorner = NexusUI("UICorner", {
         CornerRadius = UDim.new(0, 24),
         Parent = animatedBorder
     })
     
-    local borderStroke = self:Create("UIStroke", {
+    local borderStroke = NexusUI("UIStroke", {
         Color = self.Colors.PinkLight,
         Thickness = 3,
         Transparency = 0.3,
         Parent = animatedBorder
     })
     
-    local borderGradient = self:Create("UIGradient", {
+    local borderGradient = NexusUI("UIGradient", {
         Color = ColorSequence.new{
             ColorSequenceKeypoint.new(0, self.Colors.PinkLight),
             ColorSequenceKeypoint.new(0.3, self.Colors.PinkMedium),
@@ -456,7 +456,7 @@ function NexusUI:CreateWindow(config)
     borderTween:Play()
     
     -- Header
-    local header = self:Create("Frame", {
+    local header = NexusUI("Frame", {
         Name = "Header",
         Size = UDim2.new(1, 0, 0, 40),
         BackgroundTransparency = 1,
@@ -464,7 +464,7 @@ function NexusUI:CreateWindow(config)
         Parent = mainContainer
     })
     
-    local titleLabel = self:CreateLabel({
+    local titleLabel = NexusUILabel({
         Size = UDim2.new(1, -40, 1, 0),
         Position = UDim2.new(0, 20, 0, 0),
         Text = config.Title or "NEXUS UI",
@@ -477,7 +477,7 @@ function NexusUI:CreateWindow(config)
         Parent = header
     })
     
-    local titleGradient = self:Create("UIGradient", {
+    local titleGradient = NexusUI("UIGradient", {
         Color = ColorSequence.new{
             ColorSequenceKeypoint.new(0, self.Colors.PinkLight),
             ColorSequenceKeypoint.new(0.5, self.Colors.PinkMedium),
@@ -488,7 +488,7 @@ function NexusUI:CreateWindow(config)
     })
     
     -- Tab Buttons Container
-    local tabButtonsContainer = self:Create("Frame", {
+    local tabButtonsContainer = NexusUI("Frame", {
         Size = UDim2.new(1, -40, 0, 30),
         Position = UDim2.new(0, 20, 0, 45),
         BackgroundTransparency = 1,
@@ -496,14 +496,14 @@ function NexusUI:CreateWindow(config)
         Parent = mainContainer
     })
     
-    local tabButtonsLayout = self:Create("UIListLayout", {
+    local tabButtonsLayout = NexusUI("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
         Padding = UDim.new(0, 5),
         Parent = tabButtonsContainer
     })
     
     -- Content Area
-    local contentFrame = self:Create("Frame", {
+    local contentFrame = NexusUI("Frame", {
         Size = UDim2.new(1, -40, 1, -90),
         Position = UDim2.new(0, 20, 0, 80),
         BackgroundTransparency = 1,
@@ -512,7 +512,7 @@ function NexusUI:CreateWindow(config)
     })
     
     -- Left Side
-    local leftSide = self:Create("ScrollingFrame", {
+    local leftSide = NexusUI("ScrollingFrame", {
         Size = UDim2.new(0.5, -5, 1, 0),
         BackgroundTransparency = 1,
         ScrollBarThickness = 3,
@@ -522,14 +522,14 @@ function NexusUI:CreateWindow(config)
         Parent = contentFrame
     })
     
-    local leftLayout = self:Create("UIListLayout", {
+    local leftLayout = NexusUI("UIListLayout", {
         Padding = UDim.new(0, 10),
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = leftSide
     })
     
     -- Right Side
-    local rightSide = self:Create("ScrollingFrame", {
+    local rightSide = NexusUI("ScrollingFrame", {
         Size = UDim2.new(0.5, -5, 1, 0),
         Position = UDim2.new(0.5, 5, 0, 0),
         BackgroundTransparency = 1,
@@ -540,7 +540,7 @@ function NexusUI:CreateWindow(config)
         Parent = contentFrame
     })
     
-    local rightLayout = self:Create("UIListLayout", {
+    local rightLayout = NexusUI("UIListLayout", {
         Padding = UDim.new(0, 10),
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = rightSide
@@ -571,68 +571,68 @@ function NexusUI:CreateWindow(config)
         mainContainer.Visible = window.Visible
     end
     
-    function window:AddTab(tabName)
-        local tab = {
-            Name = tabName,
-            Groupboxes = {},
-            Visible = false
-        }
-        
-        -- Create tab button
-        local tabButton = self:Create("TextButton", {
-            Size = UDim2.new(0, 80, 1, 0),
-            BackgroundColor3 = self.Colors.Primary,
-            BorderSizePixel = 0,
-            Text = tabName,
-            TextColor3 = self.Colors.TextPrimary,
-            TextSize = 12,
-            Font = Enum.Font.Gotham,
-            AutoButtonColor = false,
-            ZIndex = 1002,
-            Parent = tabButtonsContainer
-        })
-        
-        local tabCorner = self:Create("UICorner", {
-            CornerRadius = UDim.new(0, 6),
-            Parent = tabButton
-        })
-        
-        -- Tab selection logic
-        tabButton.MouseButton1Click:Connect(function()
-            -- Hide all groupboxes
-            for _, groupbox in pairs(window.Groupboxes) do
-                if groupbox.Frame then
-                    groupbox.Frame.Visible = false
-                end
+function window:AddTab(tabName)
+    local tab = {
+        Name = tabName,
+        Groupboxes = {},
+        Visible = false
+    }
+    
+    -- Create tab button - FIXED: Use NexusUI:Create instead of NexusUI
+    local tabButton = NexusUI:Create("TextButton", {
+        Size = UDim2.new(0, 80, 1, 0),
+        BackgroundColor3 = NexusUI.Colors.Primary, -- This was causing the nil error
+        BorderSizePixel = 0,
+        Text = tabName,
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 12,
+        Font = Enum.Font.Gotham,
+        AutoButtonColor = false,
+        ZIndex = 1002,
+        Parent = tabButtonsContainer
+    })
+    
+    local tabCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = tabButton
+    })
+    
+    -- Tab selection logic
+    tabButton.MouseButton1Click:Connect(function()
+        -- Hide all groupboxes
+        for _, groupbox in pairs(window.Groupboxes) do
+            if groupbox.Frame then
+                groupbox.Frame.Visible = false
             end
-            
-            -- Show this tab's groupboxes
-            for _, groupbox in pairs(tab.Groupboxes) do
-                if groupbox.Frame then
-                    groupbox.Frame.Visible = true
-                end
-            end
-            
-            -- Update tab button appearance
-            for _, otherTab in pairs(window.Tabs) do
-                if otherTab.Button then
-                    otherTab.Button.BackgroundColor3 = self.Colors.Primary
-                end
-            end
-            tabButton.BackgroundColor3 = self.Colors.PinkMedium
-        end)
-        
-        tab.Button = tabButton
-        table.insert(window.Tabs, tab)
-        
-        -- Select first tab
-        if #window.Tabs == 1 then
-            window.ActiveTab = tab
-            tabButton.BackgroundColor3 = self.Colors.PinkMedium
         end
         
-        return tab
+        -- Show this tab's groupboxes
+        for _, groupbox in pairs(tab.Groupboxes) do
+            if groupbox.Frame then
+                groupbox.Frame.Visible = true
+            end
+        end
+        
+        -- Update tab button appearance - FIXED: Use NexusUI.Colors
+        for _, otherTab in pairs(window.Tabs) do
+            if otherTab.Button then
+                otherTab.Button.BackgroundColor3 = NexusUI.Colors.Primary
+            end
+        end
+        tabButton.BackgroundColor3 = NexusUI.Colors.PinkMedium
+    end)
+    
+    tab.Button = tabButton
+    table.insert(window.Tabs, tab)
+    
+    -- Select first tab
+    if #window.Tabs == 1 then
+        window.ActiveTab = tab
+        tabButton.BackgroundColor3 = NexusUI.Colors.PinkMedium
     end
+    
+    return tab
+end
     
     function window:AddLeftGroupbox(title)
         return self:AddGroupbox(title, leftSide)
@@ -649,7 +649,7 @@ function NexusUI:CreateWindow(config)
             Visible = true
         }
         
-        local groupboxFrame = self:Create("Frame", {
+        local groupboxFrame = NexusUI("Frame", {
             Size = UDim2.new(1, 0, 0, 100),
             BackgroundColor3 = self.Colors.Primary,
             BorderSizePixel = 0,
@@ -657,18 +657,18 @@ function NexusUI:CreateWindow(config)
             Parent = parent
         })
         
-        local corner = self:Create("UICorner", {
+        local corner = NexusUI("UICorner", {
             CornerRadius = UDim.new(0, 12),
             Parent = groupboxFrame
         })
         
-        local stroke = self:Create("UIStroke", {
+        local stroke = NexusUI("UIStroke", {
             Color = self.Colors.Border,
             Thickness = 1,
             Parent = groupboxFrame
         })
         
-        local titleLabel = self:CreateLabel({
+        local titleLabel = NexusUILabel({
             Size = UDim2.new(1, -20, 0, 25),
             Position = UDim2.new(0, 10, 0, 5),
             Text = title,
@@ -679,7 +679,7 @@ function NexusUI:CreateWindow(config)
             Parent = groupboxFrame
         })
         
-        local contentFrame = self:Create("Frame", {
+        local contentFrame = NexusUI("Frame", {
             Size = UDim2.new(1, -20, 1, -35),
             Position = UDim2.new(0, 10, 0, 30),
             BackgroundTransparency = 1,
@@ -687,7 +687,7 @@ function NexusUI:CreateWindow(config)
             Parent = groupboxFrame
         })
         
-        local layout = self:Create("UIListLayout", {
+        local layout = NexusUI("UIListLayout", {
             Padding = UDim.new(0, 5),
             SortOrder = Enum.SortOrder.LayoutOrder,
             Parent = contentFrame
@@ -1428,13 +1428,13 @@ end
 function NexusUI:Notify(title, message, duration)
     duration = duration or 5
     
-    local notificationGui = self:Create("ScreenGui", {
+    local notificationGui = NexusUI("ScreenGui", {
         Name = "Notification",
         Parent = CoreGui,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     })
     
-    local notificationFrame = self:Create("Frame", {
+    local notificationFrame = NexusUI("Frame", {
         Size = UDim2.new(0, 300, 0, 80),
         Position = UDim2.new(1, -320, 1, -100),
         BackgroundColor3 = self.Colors.Surface,
@@ -1443,18 +1443,18 @@ function NexusUI:Notify(title, message, duration)
         Parent = notificationGui
     })
     
-    local corner = self:Create("UICorner", {
+    local corner = NexusUI("UICorner", {
         CornerRadius = UDim.new(0, 12),
         Parent = notificationFrame
     })
     
-    local stroke = self:Create("UIStroke", {
+    local stroke = NexusUI("UIStroke", {
         Color = self.Colors.PinkMedium,
         Thickness = 2,
         Parent = notificationFrame
     })
     
-    local titleLabel = self:CreateLabel({
+    local titleLabel = NexusUILabel({
         Size = UDim2.new(1, -20, 0, 25),
         Position = UDim2.new(0, 10, 0, 5),
         Text = title,
@@ -1465,7 +1465,7 @@ function NexusUI:Notify(title, message, duration)
         Parent = notificationFrame
     })
     
-    local messageLabel = self:CreateLabel({
+    local messageLabel = NexusUILabel({
         Size = UDim2.new(1, -20, 1, -35),
         Position = UDim2.new(0, 10, 0, 30),
         Text = message,
