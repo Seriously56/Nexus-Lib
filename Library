@@ -834,9 +834,151 @@ function Nexus:CreateSection(options, parent)
         return separator
     end
     
+    function section:AddGroupBox(options)
+        local groupbox = Nexus:CreateGroupBox(options, self.ElementsContainer)
+        table.insert(self.Elements, groupbox)
+        return groupbox
+    end
+    
     return section
 end
 
+-- ========================================
+-- GROUPBOX COMPONENT
+-- ========================================
+function Nexus:CreateGroupBox(options, parent)
+    local options = options or {}
+    local groupbox = {
+        Name = options.Name or "GroupBox",
+        Title = options.Title or "Group Box",
+        Size = options.Size or UDim2.new(1, 0, 0, 150),
+        LayoutOrder = options.LayoutOrder or 1,
+        Elements = {}
+    }
+    
+    groupbox.Container = Nexus.Utils.Create("Frame", {
+        Name = groupbox.Name,
+        Size = groupbox.Size,
+        BackgroundColor3 = self.Colors.Current.Primary,
+        BackgroundTransparency = 0.1,
+        BorderSizePixel = 0,
+        LayoutOrder = groupbox.LayoutOrder,
+        Parent = parent
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 8),
+        Parent = groupbox.Container
+    })
+    
+    Nexus.Utils.Create("UIStroke", {
+        Color = self.Colors.Current.Border,
+        Thickness = 1,
+        Transparency = 0.3,
+        Parent = groupbox.Container
+    })
+    
+    -- GroupBox Header
+    groupbox.Header = Nexus.Utils.Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 25),
+        BackgroundColor3 = self.Colors.Current.Secondary,
+        BorderSizePixel = 0,
+        Parent = groupbox.Container
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 8),
+        Parent = groupbox.Header
+    })
+    
+    groupbox.TitleLabel = Nexus.Utils.Create("TextLabel", {
+        Size = UDim2.new(1, -10, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Text = groupbox.Title,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 1002,
+        Parent = groupbox.Header
+    })
+    
+    -- Elements Container
+    groupbox.ElementsContainer = Nexus.Utils.Create("Frame", {
+        Size = UDim2.new(1, -10, 1, -35),
+        Position = UDim2.new(0, 5, 0, 30),
+        BackgroundTransparency = 1,
+        Parent = groupbox.Container
+    })
+    
+    groupbox.ElementsLayout = Nexus.Utils.Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 6),
+        Parent = groupbox.ElementsContainer
+    })
+    
+    groupbox.ElementsPadding = Nexus.Utils.Create("UIPadding", {
+        PaddingTop = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 5),
+        Parent = groupbox.ElementsContainer
+    })
+    
+    -- Element methods
+    function groupbox:AddButton(options)
+        local button = Nexus:CreateButton(options, self.ElementsContainer)
+        table.insert(self.Elements, button)
+        return button
+    end
+    
+    function groupbox:AddToggle(options)
+        local toggle = Nexus:CreateToggle(options, self.ElementsContainer)
+        table.insert(self.Elements, toggle)
+        return toggle
+    end
+    
+    function groupbox:AddSlider(options)
+        local slider = Nexus:CreateSlider(options, self.ElementsContainer)
+        table.insert(self.Elements, slider)
+        return slider
+    end
+    
+    function groupbox:AddDropdown(options)
+        local dropdown = Nexus:CreateDropdown(options, self.ElementsContainer)
+        table.insert(self.Elements, dropdown)
+        return dropdown
+    end
+    
+    function groupbox:AddLabel(options)
+        local label = Nexus:CreateLabel(options, self.ElementsContainer)
+        table.insert(self.Elements, label)
+        return label
+    end
+    
+    function groupbox:AddTextInput(options)
+        local input = Nexus:CreateTextInput(options, self.ElementsContainer)
+        table.insert(self.Elements, input)
+        return input
+    end
+    
+    function groupbox:AddKeybind(options)
+        local keybind = Nexus:CreateKeybind(options, self.ElementsContainer)
+        table.insert(self.Elements, keybind)
+        return keybind
+    end
+    
+    function groupbox:AddSeparator()
+        local separator = Nexus:CreateSeparator(self.ElementsContainer)
+        table.insert(self.Elements, separator)
+        return separator
+    end
+    
+    function groupbox:SetVisible(visible)
+        self.Container.Visible = visible
+    end
+    
+    return groupbox
+end
 -- ========================================
 -- BUTTON COMPONENT
 -- ========================================
