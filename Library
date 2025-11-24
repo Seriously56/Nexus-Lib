@@ -1,9 +1,12 @@
--- Nexus UI Library - Custom GUI Library with Max Money Design
+-- Nexus UI Library - Complete with Full Logic and Functionality
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local TextService = game:GetService("TextService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
@@ -12,37 +15,24 @@ local Mouse = Player:GetMouse()
 -- NEXUS COLOR SCHEME (MAX MONEY STYLE)
 -- ========================================
 local NexusColors = {
-    -- Core Colors
     Background = Color3.fromRGB(15, 8, 15),
     Surface = Color3.fromRGB(25, 15, 25),
     Primary = Color3.fromRGB(40, 25, 35),
     Secondary = Color3.fromRGB(40, 28, 38),
     Border = Color3.fromRGB(60, 40, 55),
-    
-    -- Text Colors
     TextPrimary = Color3.fromRGB(255, 240, 245),
     TextSecondary = Color3.fromRGB(200, 170, 185),
-    
-    -- Status Colors
     Success = Color3.fromRGB(100, 255, 150),
     Error = Color3.fromRGB(255, 100, 130),
     Warning = Color3.fromRGB(255, 200, 100),
-    
-    -- Accent Colors
     Accent = Color3.fromRGB(255, 105, 180),
     AccentDark = Color3.fromRGB(200, 65, 150),
     AccentLight = Color3.fromRGB(255, 182, 193),
-    
-    -- Button Colors
     ButtonPrimary = Color3.fromRGB(255, 105, 180),
     ButtonSecondary = Color3.fromRGB(180, 65, 160),
-    
-    -- Hover States
     HoverPrimary = Color3.fromRGB(50, 35, 45),
     HoverAccent = Color3.fromRGB(255, 120, 200),
     HoverSecondary = Color3.fromRGB(200, 85, 180),
-    
-    -- Disabled States
     Disabled = Color3.fromRGB(100, 100, 100),
     DisabledText = Color3.fromRGB(150, 150, 150)
 }
@@ -61,7 +51,13 @@ local NexusUI = {
     Toggled = false,
     IsMobile = (UserInputService.TouchEnabled and not UserInputService.MouseEnabled),
     CanDrag = true,
-    ShowCustomCursor = true
+    ShowCustomCursor = true,
+    AutoFarmLoops = {},
+    ESPHandles = {},
+    WhitelistedPlayers = {},
+    BlacklistedPlayers = {},
+    AimbotTarget = nil,
+    SilentAimTarget = nil
 }
 
 -- Screen GUI Setup
@@ -73,6 +69,68 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
 NexusUI.ScreenGui = ScreenGui
+
+-- ========================================
+-- GAME-SPECIFIC LOGIC MODULES
+-- ========================================
+local GameLogic = {
+    AutoFarm = {
+        Active = false,
+        Connections = {},
+        LastFarmTime = 0
+    },
+    
+    ESP = {
+        Enabled = false,
+        Boxes = {},
+        NameTags = {},
+        Tracers = {}
+    },
+    
+    Aimbot = {
+        Enabled = false,
+        Smoothness = 0.1,
+        FOV = 50,
+        TargetPart = "Head",
+        TeamCheck = true,
+        WallCheck = true
+    },
+    
+    SilentAim = {
+        Enabled = false,
+        HitChance = 100,
+        TargetPart = "Head"
+    },
+    
+    Combat = {
+        AutoClicker = false,
+        Reach = 25,
+        HitBox = 1,
+        AutoBlock = false
+    },
+    
+    Movement = {
+        Speed = 16,
+        JumpPower = 50,
+        FlyEnabled = false,
+        Noclip = false,
+        InfiniteJump = false
+    },
+    
+    Player = {
+        GodMode = false,
+        AntiAfk = false,
+        AutoRespawn = false,
+        NoFallDamage = false
+    },
+    
+    Misc = {
+        AutoCollect = false,
+        AutoSell = false,
+        AntiKick = false,
+        ServerHop = false
+    }
+}
 
 -- ========================================
 -- UTILITY FUNCTIONS
@@ -157,6 +215,443 @@ function NexusUI:AddHoverEffect(button, normalColor, hoverColor)
     end)
 end
 
+function NexusUI:SafeCallback(callback, ...)
+    if callback and type(callback) == "function" then
+        pcall(callback, ...)
+    end
+end
+
+-- ========================================
+-- GAME LOGIC FUNCTIONS
+-- ========================================
+function GameLogic:StartAutoFarm()
+    if GameLogic.AutoFarm.Active then return end
+    
+    GameLogic.AutoFarm.Active = true
+    NexusUI:Notify("Auto Farm Started", 3)
+    
+    local farmLoop = RunService.Heartbeat:Connect(function()
+        if not GameLogic.AutoFarm.Active then return end
+        
+        -- Auto farm logic (game-specific)
+        local character = Player.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChild("Humanoid")
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        
+        if not humanoid or not rootPart then return end
+        
+        -- Find nearest target (coins, enemies, etc.)
+        local nearestTarget = nil
+        local nearestDistance = math.huge
+        
+        for _, item in pairs(workspace:GetChildren()) do
+            if item:IsA("Part") and item.Name == "Coin" then
+                local distance = (rootPart.Position - item.Position).Magnitude
+                if distance < nearestDistance then
+                    nearestDistance = distance
+                    nearestTarget = item
+                end
+            end
+        end
+        
+        if nearestTarget and nearestDistance < 50 then
+            -- Move to target
+            humanoid:MoveTo(nearestTarget.Position)
+            
+            -- Collect if close enough
+            if nearestDistance < 10 then
+                firetouchinterest(rootPart, nearestTarget, 0)
+                firetouchinterest(rootPart, nearestTarget, 1)
+            end
+        end
+    end)
+    
+    table.insert(GameLogic.AutoFarm.Connections, farmLoop)
+end
+
+function GameLogic:StopAutoFarm()
+    GameLogic.AutoFarm.Active = false
+    for _, connection in pairs(GameLogic.AutoFarm.Connections) do
+        connection:Disconnect()
+    end
+    GameLogic.AutoFarm.Connections = {}
+    NexusUI:Notify("Auto Farm Stopped", 3)
+end
+
+function GameLogic:ToggleESP()
+    GameLogic.ESP.Enabled = not GameLogic.ESP.Enabled
+    
+    if GameLogic.ESP.Enabled then
+        NexusUI:Notify("ESP Enabled", 3)
+        GameLogic:CreateESP()
+    else
+        NexusUI:Notify("ESP Disabled", 3)
+        GameLogic:ClearESP()
+    end
+end
+
+function GameLogic:CreateESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Player then
+            GameLogic:CreateESPForPlayer(player)
+        end
+    end
+    
+    -- Listen for new players
+    Players.PlayerAdded:Connect(function(player)
+        if GameLogic.ESP.Enabled then
+            GameLogic:CreateESPForPlayer(player)
+        end
+    end)
+end
+
+function GameLogic:CreateESPForPlayer(player)
+    local character = player.Character or player.CharacterAdded:Wait()
+    
+    -- Create ESP Box
+    local box = Instance.new("BoxHandleAdornment")
+    box.Name = "NexusESPBox"
+    box.Adornee = character:WaitForChild("HumanoidRootPart")
+    box.AlwaysOnTop = true
+    box.ZIndex = 10
+    box.Size = Vector3.new(4, 6, 2)
+    box.Color3 = NexusColors.Accent
+    box.Transparency = 0.3
+    box.Parent = character.HumanoidRootPart
+    
+    GameLogic.ESP.Boxes[player] = box
+    
+    -- Create Name Tag
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "NexusESPName"
+    billboard.Adornee = character.Head
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = NexusColors.TextPrimary
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.TextSize = 14
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Parent = billboard
+    
+    billboard.Parent = character.Head
+    GameLogic.ESP.NameTags[player] = billboard
+end
+
+function GameLogic:ClearESP()
+    for player, box in pairs(GameLogic.ESP.Boxes) do
+        box:Destroy()
+    end
+    for player, tag in pairs(GameLogic.ESP.NameTags) do
+        tag:Destroy()
+    end
+    GameLogic.ESP.Boxes = {}
+    GameLogic.ESP.NameTags = {}
+end
+
+function GameLogic:ToggleAimbot()
+    GameLogic.Aimbot.Enabled = not GameLogic.Aimbot.Enabled
+    
+    if GameLogic.Aimbot.Enabled then
+        NexusUI:Notify("Aimbot Enabled", 3)
+        GameLogic:StartAimbot()
+    else
+        NexusUI:Notify("Aimbot Disabled", 3)
+        GameLogic.AimbotTarget = nil
+    end
+end
+
+function GameLogic:StartAimbot()
+    local aimbotLoop = RunService.Heartbeat:Connect(function()
+        if not GameLogic.Aimbot.Enabled then return end
+        
+        local character = Player.Character
+        if not character then return end
+        
+        local camera = workspace.CurrentCamera
+        local mouse = Player:GetMouse()
+        
+        local target = GameLogic:GetAimbotTarget()
+        if target then
+            GameLogic.AimbotTarget = target
+            local targetPos = target[GameLogic.Aimbot.TargetPart].Position
+            
+            -- Smooth aim
+            local current = camera.CFrame
+            local targetCF = CFrame.lookAt(current.Position, targetPos)
+            camera.CFrame = current:Lerp(targetCF, GameLogic.Aimbot.Smoothness)
+        else
+            GameLogic.AimbotTarget = nil
+        end
+    end)
+end
+
+function GameLogic:GetAimbotTarget()
+    local character = Player.Character
+    if not character then return nil end
+    
+    local camera = workspace.CurrentCamera
+    local mouse = Player:GetMouse()
+    
+    local closestTarget = nil
+    local closestDistance = math.huge
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Player and player.Character then
+            local targetChar = player.Character
+            local humanoid = targetChar:FindFirstChild("Humanoid")
+            local rootPart = targetChar:FindFirstChild("HumanoidRootPart")
+            
+            if humanoid and humanoid.Health > 0 and rootPart then
+                -- Team check
+                if GameLogic.Aimbot.TeamCheck and player.Team == Player.Team then
+                    continue
+                end
+                
+                -- Wall check
+                if GameLogic.Aimbot.WallCheck then
+                    local ray = Ray.new(camera.CFrame.Position, (rootPart.Position - camera.CFrame.Position).Unit * 1000)
+                    local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, {Player.Character, targetChar})
+                    if hit and not hit:IsDescendantOf(targetChar) then
+                        continue
+                    end
+                end
+                
+                -- FOV check
+                local screenPoint, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+                if onScreen then
+                    local distance = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(screenPoint.X, screenPoint.Y)).Magnitude
+                    if distance < GameLogic.Aimbot.FOV and distance < closestDistance then
+                        closestDistance = distance
+                        closestTarget = targetChar
+                    end
+                end
+            end
+        end
+    end
+    
+    return closestTarget
+end
+
+function GameLogic:SetWalkSpeed(speed)
+    GameLogic.Movement.Speed = speed
+    local character = Player.Character
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = speed
+        end
+    end
+end
+
+function GameLogic:SetJumpPower(power)
+    GameLogic.Movement.JumpPower = power
+    local character = Player.Character
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.JumpPower = power
+        end
+    end
+end
+
+function GameLogic:ToggleFly()
+    GameLogic.Movement.FlyEnabled = not GameLogic.Movement.FlyEnabled
+    
+    if GameLogic.Movement.FlyEnabled then
+        NexusUI:Notify("Fly Enabled", 3)
+        GameLogic:StartFlying()
+    else
+        NexusUI:Notify("Fly Disabled", 3)
+        GameLogic:StopFlying()
+    end
+end
+
+function GameLogic:StartFlying()
+    local character = Player.Character
+    if not character then return end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not rootPart or not humanoid then return end
+    
+    humanoid.PlatformStand = true
+    
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(40000, 40000, 40000)
+    bodyVelocity.Parent = rootPart
+    
+    local flyLoop = RunService.Heartbeat:Connect(function()
+        if not GameLogic.Movement.FlyEnabled or not character then
+            bodyVelocity:Destroy()
+            humanoid.PlatformStand = false
+            return
+        end
+        
+        local camera = workspace.CurrentCamera
+        local moveDirection = Vector3.new(0, 0, 0)
+        
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveDirection = moveDirection + camera.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveDirection = moveDirection - camera.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveDirection = moveDirection - camera.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveDirection = moveDirection + camera.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            moveDirection = moveDirection + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            moveDirection = moveDirection - Vector3.new(0, 1, 0)
+        end
+        
+        bodyVelocity.Velocity = moveDirection.Unit * 50
+    end)
+    
+    table.insert(GameLogic.AutoFarm.Connections, flyLoop)
+end
+
+function GameLogic:StopFlying()
+    local character = Player.Character
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        
+        if humanoid then
+            humanoid.PlatformStand = false
+        end
+        
+        if rootPart then
+            local bodyVelocity = rootPart:FindFirstChild("BodyVelocity")
+            if bodyVelocity then
+                bodyVelocity:Destroy()
+            end
+        end
+    end
+end
+
+function GameLogic:ToggleNoclip()
+    GameLogic.Movement.Noclip = not GameLogic.Movement.Noclip
+    
+    if GameLogic.Movement.Noclip then
+        NexusUI:Notify("Noclip Enabled", 3)
+        GameLogic:StartNoclip()
+    else
+        NexusUI:Notify("Noclip Disabled", 3)
+    end
+end
+
+function GameLogic:StartNoclip()
+    local noclipLoop = RunService.Stepped:Connect(function()
+        if not GameLogic.Movement.Noclip then return end
+        
+        local character = Player.Character
+        if not character then return end
+        
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end)
+    
+    table.insert(GameLogic.AutoFarm.Connections, noclipLoop)
+end
+
+function GameLogic:ToggleInfiniteJump()
+    GameLogic.Movement.InfiniteJump = not GameLogic.Movement.InfiniteJump
+    
+    if GameLogic.Movement.InfiniteJump then
+        NexusUI:Notify("Infinite Jump Enabled", 3)
+        GameLogic:StartInfiniteJump()
+    else
+        NexusUI:Notify("Infinite Jump Disabled", 3)
+    end
+end
+
+function GameLogic:StartInfiniteJump()
+    local jumpConnection = UserInputService.JumpRequest:Connect(function()
+        if GameLogic.Movement.InfiniteJump then
+            local character = Player.Character
+            if character then
+                local humanoid = character:FindFirstChild("Humanoid")
+                if humanoid then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end
+    end)
+    
+    table.insert(GameLogic.AutoFarm.Connections, jumpConnection)
+end
+
+function GameLogic:ToggleAutoClicker()
+    GameLogic.Combat.AutoClicker = not GameLogic.Combat.AutoClicker
+    
+    if GameLogic.Combat.AutoClicker then
+        NexusUI:Notify("Auto Clicker Enabled", 3)
+        GameLogic:StartAutoClicker()
+    else
+        NexusUI:Notify("Auto Clicker Disabled", 3)
+    end
+end
+
+function GameLogic:StartAutoClicker()
+    local clickLoop = RunService.Heartbeat:Connect(function()
+        if not GameLogic.Combat.AutoClicker then return end
+        
+        local character = Player.Character
+        if not character then return end
+        
+        local tool = character:FindFirstChildOfClass("Tool")
+        if tool then
+            -- Simulate mouse click
+            tool:Activate()
+        end
+    end)
+    
+    table.insert(GameLogic.AutoFarm.Connections, clickLoop)
+end
+
+function GameLogic:ServerHop()
+    NexusUI:Notify("Server hopping...", 3)
+    
+    local servers = {}
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+    end)
+    
+    if success and result and result.data then
+        for _, server in pairs(result.data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                table.insert(servers, server)
+            end
+        end
+        
+        if #servers > 0 then
+            local randomServer = servers[math.random(1, #servers)]
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer.id, Player)
+        else
+            NexusUI:Notify("No servers found", 3)
+        end
+    else
+        NexusUI:Notify("Failed to get servers", 3)
+    end
+end
+
 -- ========================================
 -- WINDOW CREATION
 -- ========================================
@@ -164,7 +659,7 @@ function NexusUI:CreateWindow(config)
     config = config or {}
     local window = {
         Tabs = {},
-        Title = config.Title or "Nexus UI",
+        Title = config.Title or "Nexus Hub",
         Size = config.Size or UDim2.new(0, 550, 0, 600),
         Position = config.Position or UDim2.new(0.5, -275, 0.5, -300)
     }
@@ -346,47 +841,7 @@ function NexusUI:CreateWindow(config)
 end
 
 -- ========================================
--- DRAGGABLE FUNCTIONALITY
--- ========================================
-function NexusUI:MakeDraggable(dragHandle, target)
-    local dragging = false
-    local dragInput, dragStart, startPos
-    
-    dragHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = target.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    dragHandle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            local delta = input.Position - dragStart
-            target.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
-
--- ========================================
--- UI ELEMENTS (NEXUS STYLE)
+-- UI ELEMENTS WITH INTEGRATED LOGIC
 -- ========================================
 function NexusUI:CreateButton(parent, config)
     config = config or {}
@@ -408,20 +863,16 @@ function NexusUI:CreateButton(parent, config)
     
     self:ApplyNexusStyle(buttonFrame, "button")
     
-    -- Add gradient
     local buttonGradient = self:CreateGradient(buttonFrame, {
         NexusColors.AccentDark,
         NexusColors.Accent
     })
     
-    -- Hover effect
     self:AddHoverEffect(buttonFrame, NexusColors.ButtonPrimary, NexusColors.HoverAccent)
     
-    -- Click event
     buttonFrame.MouseButton1Click:Connect(function()
         self:SafeCallback(button.Callback)
         
-        -- Pulse animation
         TweenService:Create(buttonFrame, TweenInfo.new(0.1), {
             BackgroundColor3 = NexusColors.AccentLight
         }):Play()
@@ -514,9 +965,7 @@ function NexusUI:CreateToggle(parent, config)
         toggle:SetValue(not toggle.Value)
     end)
     
-    -- Set initial state
     toggle:SetValue(toggle.Value)
-    
     toggle.Instance = toggleContainer
     self.Toggles[toggle.Text] = toggle
     
@@ -622,9 +1071,7 @@ function NexusUI:CreateSlider(parent, config)
         updateSlider(input)
     end)
     
-    -- Set initial value
     slider:SetValue(slider.Value)
-    
     slider.Instance = sliderContainer
     self.Options[slider.Text] = slider
     
@@ -715,7 +1162,6 @@ function NexusUI:CreateDropdown(parent, config)
         dropdown:Toggle()
     end
     
-    -- Create option buttons
     for _, option in ipairs(dropdown.Options) do
         local optionButton = self:Create("TextButton", {
             Size = UDim2.new(1, -10, 0, 25),
@@ -739,7 +1185,6 @@ function NexusUI:CreateDropdown(parent, config)
         dropdown:Toggle()
     end)
     
-    -- Close dropdown when clicking outside
     UserInputService.InputBegan:Connect(function(input)
         if dropdown.Open and input.UserInputType == Enum.UserInputType.MouseButton1 then
             local mousePos = input.Position
@@ -787,14 +1232,48 @@ function NexusUI:CreateLabel(parent, config)
 end
 
 -- ========================================
--- UTILITY FUNCTIONS
+-- DRAGGABLE FUNCTIONALITY
 -- ========================================
-function NexusUI:SafeCallback(callback, ...)
-    if callback and type(callback) == "function" then
-        pcall(callback, ...)
-    end
+function NexusUI:MakeDraggable(dragHandle, target)
+    local dragging = false
+    local dragInput, dragStart, startPos
+    
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = target.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    dragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
+            target.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
 end
 
+-- ========================================
+-- NOTIFICATION SYSTEM
+-- ========================================
 function NexusUI:Notify(message, duration)
     duration = duration or 5
     
@@ -817,13 +1296,11 @@ function NexusUI:Notify(message, duration)
         Parent = notification
     })
     
-    -- Slide in animation
     notification.Position = UDim2.new(1, 300, 1, -80)
     TweenService:Create(notification, TweenInfo.new(0.3), {
         Position = UDim2.new(1, -320, 1, -80)
     }):Play()
     
-    -- Auto remove after duration
     task.delay(duration, function()
         TweenService:Create(notification, TweenInfo.new(0.3), {
             Position = UDim2.new(1, 300, 1, -80)
@@ -841,14 +1318,14 @@ function NexusUI:ToggleUI()
 end
 
 -- ========================================
--- INITIALIZATION AND USAGE EXAMPLE
+-- INITIALIZATION AND USAGE
 -- ========================================
--- Keybind to toggle UI
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.RightShift then
         NexusUI:ToggleUI()
     end
 end)
 
--- Return the library
+-- Return the library with game logic
+NexusUI.GameLogic = GameLogic
 return NexusUI
