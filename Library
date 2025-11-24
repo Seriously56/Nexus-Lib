@@ -1,4 +1,4 @@
--- Keep all original Linoria functionality
+-- Keep all original functionality but replace the UI with Nexus AutoDupe design
 local cloneref = (cloneref or clonereference or function(instance: any) return instance end)
 local InputService: UserInputService = cloneref(game:GetService('UserInputService'));
 local TextService: TextService = cloneref(game:GetService('TextService'));
@@ -85,21 +85,17 @@ local Library = {
 
     HudRegistry = {};
 
-    FontColor = Color3.fromRGB(255, 240, 245);
-    MainColor = Color3.fromRGB(25, 15, 25);
-    BackgroundColor = Color3.fromRGB(15, 8, 15);
-
-    AccentColor = Color3.fromRGB(255, 105, 180);
-    DisabledAccentColor = Color3.fromRGB(142, 142, 142);
-
-    OutlineColor = Color3.fromRGB(60, 40, 55);
-    DisabledOutlineColor = Color3.fromRGB(70, 70, 70);
-
-    DisabledTextColor = Color3.fromRGB(142, 142, 142);
-
-    RiskColor = Color3.fromRGB(255, 50, 50);
-
-    Black = Color3.new(0, 0, 0);
+    -- Updated colors to match Nexus theme
+    FontColor = Color3.fromRGB(255, 240, 245),
+    MainColor = Color3.fromRGB(25, 15, 25),
+    BackgroundColor = Color3.fromRGB(15, 8, 15),
+    AccentColor = Color3.fromRGB(255, 105, 180),
+    DisabledAccentColor = Color3.fromRGB(142, 142, 142),
+    OutlineColor = Color3.fromRGB(60, 40, 55),
+    DisabledOutlineColor = Color3.fromRGB(70, 70, 70),
+    DisabledTextColor = Color3.fromRGB(142, 142, 142),
+    RiskColor = Color3.fromRGB(255, 50, 50),
+    Black = Color3.new(0, 0, 0),
     Font = Enum.Font.Gotham,
 
     OpenedFrames = {};
@@ -133,21 +129,41 @@ local Library = {
 };
 
 -- ========================================
--- PARTICLE SYSTEM (NEXUS STYLE)
+-- NEXUS AUTO DUPE GUI IMPLEMENTATION
+-- ========================================
+local NexusColors = {
+    Background = Color3.fromRGB(15, 8, 15),
+    Surface = Color3.fromRGB(25, 15, 25),
+    Primary = Color3.fromRGB(40, 25, 35),
+    Secondary = Color3.fromRGB(40, 28, 38),
+    Border = Color3.fromRGB(60, 40, 55),
+    TextPrimary = Color3.fromRGB(255, 240, 245),
+    TextSecondary = Color3.fromRGB(200, 170, 185),
+    Success = Color3.fromRGB(100, 255, 150),
+    Error = Color3.fromRGB(255, 100, 130),
+    Warning = Color3.fromRGB(255, 200, 100),
+    Discord = Color3.fromRGB(180, 65, 160),
+    GetKey = Color3.fromRGB(255, 105, 180),
+    HoverPrimary = Color3.fromRGB(50, 35, 45),
+    HoverGetKey = Color3.fromRGB(255, 120, 200),
+    HoverDiscord = Color3.fromRGB(200, 85, 180),
+    
+    -- Gradient colors from Max Money
+    PinkLight = Color3.fromRGB(255, 182, 193),
+    PinkMedium = Color3.fromRGB(255, 105, 180),
+    PinkDark = Color3.fromRGB(255, 20, 147),
+    PinkBright = Color3.fromRGB(255, 130, 190),
+    PinkNeon = Color3.fromRGB(255, 60, 160)
+}
+
+-- ========================================
+-- PARTICLE SYSTEM (CONFINED TO GUI)
 -- ========================================
 local ParticleState = {
     Particles = {},
     IsDestroyed = false,
     MousePosition = {X = 0, Y = 0},
     GuiBounds = {MinX = 0, MaxX = 0, MinY = 0, MaxY = 0}
-}
-
-local NexusColors = {
-    PinkLight = Color3.fromRGB(255, 182, 193),
-    PinkMedium = Color3.fromRGB(255, 105, 180),
-    PinkDark = Color3.fromRGB(255, 20, 147),
-    PinkBright = Color3.fromRGB(255, 130, 190),
-    PinkNeon = Color3.fromRGB(255, 60, 160)
 }
 
 local function UpdateGuiBounds(container)
@@ -163,7 +179,7 @@ local function UpdateGuiBounds(container)
     }
 end
 
-local function CreateNexusParticle(container)
+local function CreateParticle(container)
     if not container or not container.Parent or ParticleState.IsDestroyed then
         return nil
     end
@@ -255,7 +271,7 @@ local function CreateNexusParticle(container)
     return particle
 end
 
-local function UpdateNexusParticles(container)
+local function UpdateParticles(container)
     if ParticleState.IsDestroyed or not container then return end
     
     UpdateGuiBounds(container)
@@ -356,10 +372,10 @@ local function UpdateNexusParticles(container)
     end
 end
 
-local function StartNexusParticleSystem(container)
+local function StartParticleSystem(container)
     UpdateGuiBounds(container)
     
-    UserInputService.InputChanged:Connect(function(input)
+    UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             local mousePos = input.Position
             if mousePos.X >= ParticleState.GuiBounds.MinX and mousePos.X <= ParticleState.GuiBounds.MaxX and
@@ -373,13 +389,13 @@ local function StartNexusParticleSystem(container)
     task.spawn(function()
         for i = 1, 20 do
             if ParticleState.IsDestroyed then break end
-            CreateNexusParticle(container)
+            CreateParticle(container)
             task.wait(math.random(20, 100) / 1000)
         end
         
         while not ParticleState.IsDestroyed and container.Parent do
             if #ParticleState.Particles < 40 then
-                CreateNexusParticle(container)
+                CreateParticle(container)
             end
             task.wait(math.random(400, 1200) / 1000)
         end
@@ -387,61 +403,58 @@ local function StartNexusParticleSystem(container)
     
     task.spawn(function()
         while not ParticleState.IsDestroyed and container.Parent do
-            pcall(function() UpdateNexusParticles(container) end)
+            pcall(function() UpdateParticles(container) end)
             task.wait(1/60)
         end
     end)
 end
 
 -- ========================================
--- NEXUS STYLE WINDOW CREATION
+-- NEXUS WINDOW CREATION (REPLACES LINORIA UI)
 -- ========================================
 local NexusWindow = nil
+local MainContainer = nil
+local ParticleContainer = nil
 
-function Library:CreateNexusWindow(config)
+function Library:CreateWindow(config)
     local Config = config or {}
     Config.Title = Config.Title or "NEXUS"
-    Config.Size = Config.Size or UDim2.new(0, 550, 0, 600)
-    Config.Position = Config.Position or UDim2.new(0.5, -275, 0.5, -300)
+    Config.Size = Config.Size or UDim2.new(0, 250, 0, 400)
+    Config.Position = Config.Position or UDim2.new(0.5, -125, 0.5, -200)
     
-    -- Create Nexus Main Container
-    local MainContainer = Library:Create('Frame', {
-        Name = "NexusMainContainer",
-        AnchorPoint = Vector2.new(0.5, 0.5),
+    -- Main Container with FIXED opaque background
+    MainContainer = Library:Create('Frame', {
+        Name = "MainContainer",
         Size = Config.Size,
         Position = Config.Position,
-        BackgroundColor3 = Library.BackgroundColor,
+        BackgroundColor3 = NexusColors.Surface,
         BackgroundTransparency = 0,
         BorderSizePixel = 0,
         ZIndex = 1000,
         Parent = ScreenGui
     })
 
-    local MainCorner = Library:Create('UICorner', {
+    local Corner = Library:Create('UICorner', {
         CornerRadius = UDim.new(0, 20),
         Parent = MainContainer
     })
 
-    local MainStroke = Library:Create('UIStroke', {
+    local Stroke = Library:Create('UIStroke', {
         Color = NexusColors.PinkMedium,
         Thickness = 2,
         Transparency = 0.2,
         Parent = MainContainer
     })
 
-    Library:AddToRegistry(MainContainer, {
-        BackgroundColor3 = 'BackgroundColor'
-    })
-
-    -- Particle Container for Nexus Effects
-    local ParticleContainer = Library:Create('Frame', {
+    -- Particle Container (INSIDE MainContainer for GUI-only particles)
+    ParticleContainer = Library:Create('Frame', {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         ZIndex = 5,
         Parent = MainContainer
     })
 
-    -- Animated Border (Nexus Style)
+    -- Animated Border (Max Money Style)
     local AnimatedBorder = Library:Create('Frame', {
         Name = "AnimatedBorder",
         Size = UDim2.new(1, 8, 1, 8),
@@ -479,7 +492,7 @@ function Library:CreateNexusWindow(config)
         Parent = BorderStroke
     })
 
-    -- NEXUS Header
+    -- NEXUS Title Header (Max Money Style)
     local Header = Library:Create('Frame', {
         Name = "Header",
         Size = UDim2.new(1, 0, 0, 120),
@@ -501,7 +514,7 @@ function Library:CreateNexusWindow(config)
         Size = UDim2.new(1, 0, 0.5, 0),
         BackgroundTransparency = 1,
         Text = "NEXUS",
-        TextColor3 = Library.FontColor,
+        TextColor3 = NexusColors.TextPrimary,
         TextScaled = true,
         Font = Enum.Font.GothamBlack,
         TextStrokeTransparency = 0.7,
@@ -520,387 +533,111 @@ function Library:CreateNexusWindow(config)
         Parent = NexusText
     })
 
-    -- Main Content Area
+    -- AUTO DUPE Text
+    local DupeText = Library:Create('TextLabel', {
+        Size = UDim2.new(1, 0, 0.5, 0),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        BackgroundTransparency = 1,
+        Text = "AUTO DUPE",
+        TextColor3 = NexusColors.TextPrimary,
+        TextScaled = true,
+        Font = Enum.Font.GothamBlack,
+        TextStrokeTransparency = 0.7,
+        TextStrokeColor3 = NexusColors.PinkDark,
+        ZIndex = 1002,
+        Parent = TitleContainer
+    })
+
+    local DupeGradient = Library:Create('UIGradient', {
+        Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, NexusColors.PinkDark),
+            ColorSequenceKeypoint.new(0.5, NexusColors.PinkMedium),
+            ColorSequenceKeypoint.new(1, NexusColors.PinkLight)
+        },
+        Rotation = -45,
+        Parent = DupeText
+    })
+
+    -- Content Area
     local Content = Library:Create('Frame', {
         Name = "Content",
-        Size = UDim2.new(1, -40, 1, -140),
+        Size = UDim2.new(1, -40, 0, 280),
         Position = UDim2.new(0, 20, 0, 140),
         BackgroundTransparency = 1,
         ZIndex = 1001,
         Parent = MainContainer
     })
 
-    -- Tab System (Nexus Style)
-    local TabArea = Library:Create('ScrollingFrame', {
-        ScrollingDirection = Enum.ScrollingDirection.X,
-        CanvasSize = UDim2.new(0, 0, 2, 0),
-        HorizontalScrollBarInset = Enum.ScrollBarInset.Always,
-        AutomaticCanvasSize = Enum.AutomaticSize.XY,
-        ScrollBarThickness = 0,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(1, 0, 0, 40),
-        ZIndex = 1001,
-        Parent = Content
-    })
-
-    local TabListLayout = Library:Create('UIListLayout', {
-        Padding = UDim.new(0, 8),
-        FillDirection = Enum.FillDirection.Horizontal,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        Parent = TabArea
-    })
-
-    local TabContent = Library:Create('Frame', {
-        Size = UDim2.new(1, 0, 1, -50),
-        Position = UDim2.new(0, 0, 0, 50),
+    -- Status Display Section (Max Money Style)
+    local StatusSection = Library:Create('Frame', {
+        Size = UDim2.new(1, 0, 0, 80),
         BackgroundTransparency = 1,
         ZIndex = 1001,
         Parent = Content
     })
 
-    -- Window functionality
-    local Window = {
-        Tabs = {},
-        Container = MainContainer,
-        Content = Content,
-        TabArea = TabArea,
-        TabContent = TabContent,
-        CurrentTab = nil
-    }
+    -- Status Title
+    local StatusTitle = Library:Create('TextLabel', {
+        Size = UDim2.new(1, 0, 0.3, 0),
+        BackgroundTransparency = 1,
+        Text = "DUPLICATION STATUS",
+        TextColor3 = NexusColors.TextSecondary,
+        TextSize = 18,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 1002,
+        Parent = StatusSection
+    })
 
-    -- Make draggable
-    Library:MakeDraggable(Header, 25, true)
+    -- Status Text
+    local StatusText = Library:Create('TextLabel', {
+        Size = UDim2.new(1, 0, 0.4, 0),
+        Position = UDim2.new(0, 0, 0.3, 0),
+        BackgroundTransparency = 1,
+        Text = "Ready - No tool equipped",
+        TextColor3 = NexusColors.TextPrimary,
+        TextSize = 16,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 1002,
+        Parent = StatusSection
+    })
 
-    -- Start animations
-    local borderTween = TweenService:Create(BorderGradient, 
-        TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
-        {Rotation = 360})
-    borderTween:Play()
-
-    -- Start particle system
-    StartNexusParticleSystem(ParticleContainer)
-
-    -- Entrance animation
-    MainContainer.Size = UDim2.new(0, 0, 0, 0)
-    MainContainer.BackgroundTransparency = 1
-    
-    TweenService:Create(MainContainer, 
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
-        {Size = Config.Size, BackgroundTransparency = 0}):Play()
-
-    function Window:AddTab(name)
-        local Tab = {
-            Name = name,
-            Elements = {}
-        }
-
-        -- Tab Button (Nexus Style)
-        local TabButton = Library:Create('TextButton', {
-            Size = UDim2.new(0, 120, 0, 35),
-            BackgroundColor3 = Library.MainColor,
-            BorderSizePixel = 0,
-            Text = name,
-            TextColor3 = Library.FontColor,
-            TextSize = 14,
-            Font = Enum.Font.GothamBold,
-            AutoButtonColor = false,
-            ZIndex = 1002,
-            Parent = TabArea
-        })
-
-        local TabCorner = Library:Create('UICorner', {
-            CornerRadius = UDim.new(0, 8),
-            Parent = TabButton
-        })
-
-        local TabGradient = Library:Create('UIGradient', {
-            Color = ColorSequence.new{
-                ColorSequenceKeypoint.new(0, NexusColors.PinkDark),
-                ColorSequenceKeypoint.new(1, NexusColors.PinkMedium)
-            },
-            Rotation = 90,
-            Parent = TabButton
-        })
-
-        Library:AddToRegistry(TabButton, {
-            BackgroundColor3 = 'MainColor'
-        })
-
-        -- Tab Content
-        local TabFrame = Library:Create('Frame', {
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Visible = false,
-            ZIndex = 1001,
-            Parent = TabContent
-        })
-
-        local LeftSide = Library:Create('ScrollingFrame', {
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Position = UDim2.new(0, 0, 0, 0),
-            Size = UDim2.new(0.5, -5, 1, 0),
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            ScrollBarThickness = 0,
-            ZIndex = 1001,
-            Parent = TabFrame
-        })
-
-        local RightSide = Library:Create('ScrollingFrame', {
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Position = UDim2.new(0.5, 5, 0, 0),
-            Size = UDim2.new(0.5, -5, 1, 0),
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            ScrollBarThickness = 0,
-            ZIndex = 1001,
-            Parent = TabFrame
-        })
-
-        Library:Create('UIListLayout', {
-            Padding = UDim.new(0, 8),
-            FillDirection = Enum.FillDirection.Vertical,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            Parent = LeftSide
-        })
-
-        Library:Create('UIListLayout', {
-            Padding = UDim.new(0, 8),
-            FillDirection = Enum.FillDirection.Vertical,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            Parent = RightSide
-        })
-
-        for _, Side in next, { LeftSide, RightSide } do
-            Side:WaitForChild('UIListLayout'):GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function()
-                Side.CanvasSize = UDim2.fromOffset(0, Side.UIListLayout.AbsoluteContentSize.Y)
-            end)
-        end
-
-        function Tab:Show()
-            if Window.CurrentTab then
-                Window.CurrentTab:Hide()
-            end
-            
-            Window.CurrentTab = Tab
-            TabFrame.Visible = true
-            
-            -- Update tab button appearance
-            TabGradient.Color = ColorSequence.new{
-                ColorSequenceKeypoint.new(0, NexusColors.PinkMedium),
-                ColorSequenceKeypoint.new(1, NexusColors.PinkBright)
-            }
-        end
-
-        function Tab:Hide()
-            TabFrame.Visible = false
-            TabGradient.Color = ColorSequence.new{
-                ColorSequenceKeypoint.new(0, NexusColors.PinkDark),
-                ColorSequenceKeypoint.new(1, NexusColors.PinkMedium)
-            }
-        end
-
-        function Tab:AddSection(side, name)
-            local Section = {}
-            local SideFrame = side == "Left" and LeftSide or RightSide
-
-            -- Section Container (Nexus Style)
-            local SectionOuter = Library:Create('Frame', {
-                BackgroundColor3 = Library.MainColor,
-                BorderColor3 = NexusColors.PinkMedium,
-                BorderMode = Enum.BorderMode.Inset,
-                Size = UDim2.new(1, 0, 0, 0),
-                ZIndex = 1002,
-                Parent = SideFrame
-            })
-
-            Library:AddToRegistry(SectionOuter, {
-                BackgroundColor3 = 'MainColor',
-                BorderColor3 = function() return NexusColors.PinkMedium end
-            })
-
-            local SectionInner = Library:Create('Frame', {
-                BackgroundColor3 = Library.MainColor,
-                BorderColor3 = Color3.new(0, 0, 0),
-                Size = UDim2.new(1, -2, 1, -2),
-                Position = UDim2.new(0, 1, 0, 1),
-                ZIndex = 1003,
-                Parent = SectionOuter
-            })
-
-            Library:AddToRegistry(SectionInner, {
-                BackgroundColor3 = 'MainColor'
-            })
-
-            local Highlight = Library:Create('Frame', {
-                BackgroundColor3 = NexusColors.PinkMedium,
-                BorderSizePixel = 0,
-                Size = UDim2.new(1, 0, 0, 2),
-                ZIndex = 1004,
-                Parent = SectionInner
-            })
-
-            Library:AddToRegistry(Highlight, {
-                BackgroundColor3 = function() return NexusColors.PinkMedium end
-            })
-
-            local SectionLabel = Library:Create('TextLabel', {
-                Size = UDim2.new(1, 0, 0, 25),
-                Position = UDim2.new(0, 8, 0, 2),
-                BackgroundTransparency = 1,
-                Text = name,
-                TextColor3 = Library.FontColor,
-                TextSize = 14,
-                Font = Enum.Font.GothamBold,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 1004,
-                Parent = SectionInner
-            })
-
-            local Container = Library:Create('Frame', {
-                BackgroundTransparency = 1,
-                Position = UDim2.new(0, 8, 0, 30),
-                Size = UDim2.new(1, -16, 1, -38),
-                ZIndex = 1003,
-                Parent = SectionInner
-            })
-
-            Library:Create('UIListLayout', {
-                FillDirection = Enum.FillDirection.Vertical,
-                SortOrder = Enum.SortOrder.LayoutOrder,
-                Parent = Container
-            })
-
-            function Section:Resize()
-                local size = 0
-                for _, child in ipairs(Container:GetChildren()) do
-                    if not child:IsA('UIListLayout') and child.Visible then
-                        size = size + child.Size.Y.Offset
-                    end
-                end
-                SectionOuter.Size = UDim2.new(1, 0, 0, size + 38)
-            end
-
-            Section.Container = Container
-            setmetatable(Section, BaseGroupbox)
-
-            Section:AddBlank(5)
-            Section:Resize()
-
-            Tab.Elements[name] = Section
-            return Section
-        end
-
-        TabButton.MouseButton1Click:Connect(function()
-            Tab:Show()
-        end)
-
-        -- Show first tab by default
-        if #Window.Tabs == 0 then
-            Tab:Show()
-        end
-
-        table.insert(Window.Tabs, Tab)
-        return Tab
-    end
-
-    function Window:Hide()
-        MainContainer.Visible = false
-    end
-
-    function Window:Show()
-        MainContainer.Visible = true
-    end
-
-    NexusWindow = Window
-    return Window
-end
-
--- Override the original CreateWindow to use Nexus style
-local originalCreateWindow = Library.CreateWindow
-function Library:CreateWindow(...)
-    return self:CreateNexusWindow(...)
-end
-
--- ========================================
--- NEXUS STYLE ELEMENTS
--- ========================================
-function Library:CreateNexusButton(parent, text, callback)
-    local Button = Library:Create('TextButton', {
-        Size = UDim2.new(1, 0, 0, 40),
-        BackgroundColor3 = Library.MainColor,
-        BorderSizePixel = 0,
-        Text = text,
-        TextColor3 = Library.FontColor,
+    -- Cooldown Text
+    local CooldownText = Library:Create('TextLabel', {
+        Size = UDim2.new(1, 0, 0.3, 0),
+        Position = UDim2.new(0, 0, 0.7, 0),
+        BackgroundTransparency = 1,
+        Text = "Cooldown: 3 seconds",
+        TextColor3 = NexusColors.TextSecondary,
         TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 1002,
+        Parent = StatusSection
+    })
+
+    -- Control Buttons Section
+    local ButtonsSection = Library:Create('Frame', {
+        Size = UDim2.new(1, 0, 0, 140),
+        Position = UDim2.new(0, 0, 0, 90),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = Content
+    })
+
+    -- Main Toggle Button (Max Money Style)
+    local ToggleButton = Library:Create('TextButton', {
+        Size = UDim2.new(1, 0, 0, 50),
+        BackgroundColor3 = NexusColors.Primary,
+        BorderSizePixel = 0,
+        Text = "START AUTO DUPE",
+        TextColor3 = NexusColors.TextPrimary,
+        TextSize = 16,
         Font = Enum.Font.GothamBold,
         AutoButtonColor = false,
         ZIndex = 1002,
-        Parent = parent
-    })
-
-    local Corner = Library:Create('UICorner', {
-        CornerRadius = UDim.new(0, 8),
-        Parent = Button
-    })
-
-    local Gradient = Library:Create('UIGradient', {
-        Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, NexusColors.PinkDark),
-            ColorSequenceKeypoint.new(1, NexusColors.PinkMedium)
-        },
-        Rotation = 90,
-        Parent = Button
-    })
-
-    Library:AddToRegistry(Button, {
-        BackgroundColor3 = 'MainColor'
-    })
-
-    -- Hover effects
-    Button.MouseEnter:Connect(function()
-        TweenService:Create(Button, TweenInfo.new(0.2), {
-            BackgroundColor3 = Color3.fromRGB(40, 25, 35)
-        }):Play()
-    end)
-
-    Button.MouseLeave:Connect(function()
-        TweenService:Create(Button, TweenInfo.new(0.2), {
-            BackgroundColor3 = Library.MainColor
-        }):Play()
-    end)
-
-    Button.MouseButton1Click:Connect(callback)
-
-    return Button
-end
-
-function Library:CreateNexusToggle(parent, text, default, callback)
-    local Toggle = {
-        Value = default or false,
-        Type = 'Toggle'
-    }
-
-    local Container = Library:Create('Frame', {
-        Size = UDim2.new(1, 0, 0, 30),
-        BackgroundTransparency = 1,
-        ZIndex = 1002,
-        Parent = parent
-    })
-
-    local ToggleButton = Library:Create('TextButton', {
-        Size = UDim2.new(0, 50, 0, 25),
-        Position = UDim2.new(1, -55, 0, 2),
-        BackgroundColor3 = Library.MainColor,
-        BorderSizePixel = 0,
-        Text = "",
-        AutoButtonColor = false,
-        ZIndex = 1003,
-        Parent = Container
+        Parent = ButtonsSection
     })
 
     local ToggleCorner = Library:Create('UICorner', {
@@ -917,43 +654,180 @@ function Library:CreateNexusToggle(parent, text, default, callback)
         Parent = ToggleButton
     })
 
-    local ToggleLabel = Library:Create('TextLabel', {
-        Size = UDim2.new(1, -60, 1, 0),
+    -- Control Buttons Row
+    local ControlButtons = Library:Create('Frame', {
+        Size = UDim2.new(1, 0, 0, 40),
+        Position = UDim2.new(0, 0, 0, 60),
         BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = Library.FontColor,
-        TextSize = 14,
-        Font = Enum.Font.Gotham,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 1002,
-        Parent = Container
+        ZIndex = 1001,
+        Parent = ButtonsSection
     })
 
-    function Toggle:SetValue(value)
-        Toggle.Value = value
-        if value then
-            TweenService:Create(ToggleButton, TweenInfo.new(0.2), {
-                BackgroundColor3 = NexusColors.PinkMedium
-            }):Play()
-        else
-            TweenService:Create(ToggleButton, TweenInfo.new(0.2), {
-                BackgroundColor3 = Library.MainColor
-            }):Play()
-        end
-        if callback then callback(value) end
+    local SingleDupeButton = Library:Create('TextButton', {
+        Size = UDim2.new(0.48, 0, 1, 0),
+        BackgroundColor3 = NexusColors.GetKey,
+        BorderSizePixel = 0,
+        Text = "SINGLE DUPE",
+        TextColor3 = NexusColors.TextPrimary,
+        TextSize = 12,
+        Font = Enum.Font.GothamMedium,
+        AutoButtonColor = false,
+        ZIndex = 1002,
+        Parent = ControlButtons
+    })
+
+    local SingleCorner = Library:Create('UICorner', {
+        CornerRadius = UDim.new(0, 8),
+        Parent = SingleDupeButton
+    })
+
+    local SingleGradient = Library:Create('UIGradient', {
+        Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, NexusColors.PinkMedium),
+            ColorSequenceKeypoint.new(1, NexusColors.PinkBright)
+        },
+        Rotation = 90,
+        Parent = SingleDupeButton
+    })
+
+    local HideButton = Library:Create('TextButton', {
+        Size = UDim2.new(0.48, 0, 1, 0),
+        Position = UDim2.new(0.52, 0, 0, 0),
+        BackgroundColor3 = NexusColors.Discord,
+        BorderSizePixel = 0,
+        Text = "HIDE GUI",
+        TextColor3 = NexusColors.TextPrimary,
+        TextSize = 12,
+        Font = Enum.Font.GothamMedium,
+        AutoButtonColor = false,
+        ZIndex = 1002,
+        Parent = ControlButtons
+    })
+
+    local HideCorner = Library:Create('UICorner', {
+        CornerRadius = UDim.new(0, 8),
+        Parent = HideButton
+    })
+
+    local HideGradient = Library:Create('UIGradient', {
+        Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(140, 45, 120)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 85, 180))
+        },
+        Rotation = 90,
+        Parent = HideButton
+    })
+
+    -- Info Text
+    local InfoText = Library:Create('TextLabel', {
+        Size = UDim2.new(1, 0, 0, 30),
+        Position = UDim2.new(0, 0, 0, 110),
+        BackgroundTransparency = 1,
+        Text = "Right Shift to toggle • Equip tool to start",
+        TextColor3 = NexusColors.TextSecondary,
+        TextSize = 10,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 1002,
+        Parent = ButtonsSection
+    })
+
+    -- Mobile Reopen Button
+    local ReopenButton = Library:Create('ImageButton', {
+        Name = "ReopenButton",
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(0, 20, 0, 20),
+        BackgroundColor3 = NexusColors.Primary,
+        BorderSizePixel = 0,
+        Image = "rbxassetid://75247573479445",
+        ImageColor3 = NexusColors.PinkLight,
+        ScaleType = Enum.ScaleType.Fit,
+        Visible = false,
+        ZIndex = 1010,
+        Parent = ScreenGui
+    })
+
+    local ReopenCorner = Library:Create('UICorner', {
+        CornerRadius = UDim.new(0, 15),
+        Parent = ReopenButton
+    })
+
+    local ReopenStroke = Library:Create('UIStroke', {
+        Color = NexusColors.PinkLight,
+        Thickness = 2,
+        Transparency = 0.3,
+        Parent = ReopenButton
+    })
+
+    -- Window functionality
+    local Window = {
+        Container = MainContainer,
+        Content = Content,
+        ToggleButton = ToggleButton,
+        StatusText = StatusText,
+        CooldownText = CooldownText
+    }
+
+    -- Make draggable
+    Library:MakeDraggable(Header, 25, true)
+
+    -- Start animations
+    local borderTween = TweenService:Create(BorderGradient, 
+        TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
+        {Rotation = 360})
+    borderTween:Play()
+
+    -- Start particle system
+    StartParticleSystem(ParticleContainer)
+
+    -- Entrance animation
+    MainContainer.Size = UDim2.new(0, 0, 0, 0)
+    MainContainer.BackgroundTransparency = 1
+    
+    TweenService:Create(MainContainer, 
+        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+        {Size = Config.Size, BackgroundTransparency = 0}):Play()
+
+    -- Button functionality
+    local function hideGUI()
+        MainContainer.Visible = false
+        ReopenButton.Visible = true
+        ReopenButton.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(ReopenButton, 
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+            {Size = UDim2.new(0, 70, 0, 70)}):Play()
     end
 
-    ToggleButton.MouseButton1Click:Connect(function()
-        Toggle:SetValue(not Toggle.Value)
+    local function showGUI()
+        ReopenButton.Visible = false
+        MainContainer.Visible = true
+        MainContainer.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(MainContainer, 
+            TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+            {Size = Config.Size, BackgroundTransparency = 0}):Play()
+    end
+
+    HideButton.MouseButton1Click:Connect(hideGUI)
+    ReopenButton.MouseButton1Click:Connect(showGUI)
+
+    -- Keybind to hide/show
+    UserInputService.InputBegan:Connect(function(input, gp)
+        if input.KeyCode == Enum.KeyCode.RightShift then
+            if MainContainer.Visible then
+                hideGUI()
+            else
+                showGUI()
+            end
+        end
     end)
 
-    Toggle:SetValue(default)
-
-    return Toggle
+    NexusWindow = Window
+    Library.Window = Window
+    return Window
 end
 
 -- ========================================
--- ORIGINAL LIBRARY FUNCTIONS (KEPT FOR COMPATIBILITY)
+-- ORIGINAL LINORIA FUNCTIONALITY (KEPT FOR COMPATIBILITY)
 -- ========================================
 pcall(function() Library.DevicePlatform = InputService:GetPlatform(); end);
 Library.IsMobile = (Library.DevicePlatform == Enum.Platform.Android or Library.DevicePlatform == Enum.Platform.IOS);
