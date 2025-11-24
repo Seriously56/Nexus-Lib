@@ -1,6 +1,6 @@
 --========================================================
--- Nexus UI Library (Custom Linoria Replacement)
--- Complete UI Library with Nexus Design & Particles
+-- Nexus UI Library (Complete Linoria Replacement)
+-- All Linoria functionality with Nexus Design & Particles
 --========================================================
 local NexusUI = {}
 
@@ -17,7 +17,7 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
 -- ========================================
--- NEXUS COLOR SCHEME
+-- NEXUS COLOR SCHEME & CONFIG
 -- ========================================
 NexusUI.Colors = {
     Background = Color3.fromRGB(15, 8, 15),
@@ -43,8 +43,14 @@ NexusUI.Colors = {
     HoverSecondary = Color3.fromRGB(50, 38, 48)
 }
 
+-- Global storage (like Linoria's getgenv())
+NexusUI.Toggles = {}
+NexusUI.Options = {}
+NexusUI.Labels = {}
+NexusUI.Buttons = {}
+
 -- ========================================
--- PARTICLE SYSTEM
+-- PARTICLE SYSTEM (From your design)
 -- ========================================
 NexusUI.ParticleState = {
     Particles = {},
@@ -285,26 +291,15 @@ function NexusUI:StartParticleSystem(container)
 end
 
 -- ========================================
--- CORE UI FUNCTIONS
+-- CORE UI FUNCTIONS (Linoria equivalent)
 -- ========================================
-NexusUI.Toggles = {}
-NexusUI.Options = {}
-NexusUI.Labels = {}
-NexusUI.Buttons = {}
-
 function NexusUI:Create(className, properties)
     local instance = Instance.new(className)
     
     for property, value in pairs(properties) do
-        if property == "Size" or property == "Position" then
+        local success, err = pcall(function()
             instance[property] = value
-        elseif property == "TextSize" then
-            instance[property] = value
-        else
-            local success = pcall(function()
-                instance[property] = value
-            end)
-        end
+        end)
     end
     
     return instance
@@ -365,13 +360,14 @@ function NexusUI:MakeDraggable(frame, dragPart)
 end
 
 -- ========================================
--- WINDOW CREATION
+-- WINDOW SYSTEM (Linoria equivalent)
 -- ========================================
 function NexusUI:CreateWindow(config)
     config = config or {}
     local window = {
         Tabs = {},
         ActiveTab = nil,
+        Groupboxes = {},
         Visible = true
     }
     
@@ -386,8 +382,8 @@ function NexusUI:CreateWindow(config)
     -- Main Container
     local mainContainer = self:Create("Frame", {
         Name = "MainContainer",
-        Size = config.Size or UDim2.new(0, 500, 0, 400),
-        Position = config.Position or UDim2.new(0.5, -250, 0.5, -200),
+        Size = config.Size or UDim2.new(0, 550, 0, 400),
+        Position = config.Position or UDim2.new(0.5, -275, 0.5, -200),
         BackgroundColor3 = self.Colors.Surface,
         BackgroundTransparency = 0,
         BorderSizePixel = 0,
@@ -462,7 +458,7 @@ function NexusUI:CreateWindow(config)
     -- Header
     local header = self:Create("Frame", {
         Name = "Header",
-        Size = UDim2.new(1, 0, 0, 60),
+        Size = UDim2.new(1, 0, 0, 40),
         BackgroundTransparency = 1,
         ZIndex = 1001,
         Parent = mainContainer
@@ -491,14 +487,63 @@ function NexusUI:CreateWindow(config)
         Parent = titleLabel
     })
     
-    -- Tab Container
-    local tabContainer = self:Create("Frame", {
-        Name = "TabContainer",
-        Size = UDim2.new(1, -40, 1, -80),
-        Position = UDim2.new(0, 20, 0, 70),
+    -- Tab Buttons Container
+    local tabButtonsContainer = self:Create("Frame", {
+        Size = UDim2.new(1, -40, 0, 30),
+        Position = UDim2.new(0, 20, 0, 45),
         BackgroundTransparency = 1,
         ZIndex = 1001,
         Parent = mainContainer
+    })
+    
+    local tabButtonsLayout = self:Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0, 5),
+        Parent = tabButtonsContainer
+    })
+    
+    -- Content Area
+    local contentFrame = self:Create("Frame", {
+        Size = UDim2.new(1, -40, 1, -90),
+        Position = UDim2.new(0, 20, 0, 80),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = mainContainer
+    })
+    
+    -- Left Side
+    local leftSide = self:Create("ScrollingFrame", {
+        Size = UDim2.new(0.5, -5, 1, 0),
+        BackgroundTransparency = 1,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = self.Colors.PinkMedium,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ZIndex = 1001,
+        Parent = contentFrame
+    })
+    
+    local leftLayout = self:Create("UIListLayout", {
+        Padding = UDim.new(0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = leftSide
+    })
+    
+    -- Right Side
+    local rightSide = self:Create("ScrollingFrame", {
+        Size = UDim2.new(0.5, -5, 1, 0),
+        Position = UDim2.new(0.5, 5, 0, 0),
+        BackgroundTransparency = 1,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = self.Colors.PinkMedium,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ZIndex = 1001,
+        Parent = contentFrame
+    })
+    
+    local rightLayout = self:Create("UIListLayout", {
+        Padding = UDim.new(0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = rightSide
     })
     
     -- Make draggable
@@ -506,6 +551,15 @@ function NexusUI:CreateWindow(config)
     
     -- Start particle system
     self:StartParticleSystem(particleContainer)
+    
+    -- Update scrolling frame sizes
+    leftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        leftSide.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y)
+    end)
+    
+    rightLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        rightSide.CanvasSize = UDim2.new(0, 0, 0, rightLayout.AbsoluteContentSize.Y)
+    end)
     
     -- Window methods
     function window:SetTitle(newTitle)
@@ -524,16 +578,149 @@ function NexusUI:CreateWindow(config)
             Visible = false
         }
         
-        -- This is where you'd add tab creation logic
-        -- For now, we'll just store the tab
+        -- Create tab button
+        local tabButton = self:Create("TextButton", {
+            Size = UDim2.new(0, 80, 1, 0),
+            BackgroundColor3 = self.Colors.Primary,
+            BorderSizePixel = 0,
+            Text = tabName,
+            TextColor3 = self.Colors.TextPrimary,
+            TextSize = 12,
+            Font = Enum.Font.Gotham,
+            AutoButtonColor = false,
+            ZIndex = 1002,
+            Parent = tabButtonsContainer
+        })
+        
+        local tabCorner = self:Create("UICorner", {
+            CornerRadius = UDim.new(0, 6),
+            Parent = tabButton
+        })
+        
+        -- Tab selection logic
+        tabButton.MouseButton1Click:Connect(function()
+            -- Hide all groupboxes
+            for _, groupbox in pairs(window.Groupboxes) do
+                if groupbox.Frame then
+                    groupbox.Frame.Visible = false
+                end
+            end
+            
+            -- Show this tab's groupboxes
+            for _, groupbox in pairs(tab.Groupboxes) do
+                if groupbox.Frame then
+                    groupbox.Frame.Visible = true
+                end
+            end
+            
+            -- Update tab button appearance
+            for _, otherTab in pairs(window.Tabs) do
+                if otherTab.Button then
+                    otherTab.Button.BackgroundColor3 = self.Colors.Primary
+                end
+            end
+            tabButton.BackgroundColor3 = self.Colors.PinkMedium
+        end)
+        
+        tab.Button = tabButton
         table.insert(window.Tabs, tab)
         
+        -- Select first tab
         if #window.Tabs == 1 then
             window.ActiveTab = tab
-            tab.Visible = true
+            tabButton.BackgroundColor3 = self.Colors.PinkMedium
         end
         
         return tab
+    end
+    
+    function window:AddLeftGroupbox(title)
+        return self:AddGroupbox(title, leftSide)
+    end
+    
+    function window:AddRightGroupbox(title)
+        return self:AddGroupbox(title, rightSide)
+    end
+    
+    function window:AddGroupbox(title, parent)
+        local groupbox = {
+            Title = title,
+            Elements = {},
+            Visible = true
+        }
+        
+        local groupboxFrame = self:Create("Frame", {
+            Size = UDim2.new(1, 0, 0, 100),
+            BackgroundColor3 = self.Colors.Primary,
+            BorderSizePixel = 0,
+            ZIndex = 1002,
+            Parent = parent
+        })
+        
+        local corner = self:Create("UICorner", {
+            CornerRadius = UDim.new(0, 12),
+            Parent = groupboxFrame
+        })
+        
+        local stroke = self:Create("UIStroke", {
+            Color = self.Colors.Border,
+            Thickness = 1,
+            Parent = groupboxFrame
+        })
+        
+        local titleLabel = self:CreateLabel({
+            Size = UDim2.new(1, -20, 0, 25),
+            Position = UDim2.new(0, 10, 0, 5),
+            Text = title,
+            TextColor3 = self.Colors.TextPrimary,
+            TextSize = 14,
+            Font = Enum.Font.GothamBold,
+            ZIndex = 1003,
+            Parent = groupboxFrame
+        })
+        
+        local contentFrame = self:Create("Frame", {
+            Size = UDim2.new(1, -20, 1, -35),
+            Position = UDim2.new(0, 10, 0, 30),
+            BackgroundTransparency = 1,
+            ZIndex = 1002,
+            Parent = groupboxFrame
+        })
+        
+        local layout = self:Create("UIListLayout", {
+            Padding = UDim.new(0, 5),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = contentFrame
+        })
+        
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            groupboxFrame.Size = UDim2.new(1, 0, 0, layout.AbsoluteContentSize.Y + 40)
+        end)
+        
+        -- Add to window groupboxes
+        table.insert(window.Groupboxes, groupbox)
+        
+        -- Add to active tab if exists
+        if window.ActiveTab then
+            table.insert(window.ActiveTab.Groupboxes, groupbox)
+        end
+        
+        -- Hide if not first tab
+        if #window.Tabs > 1 then
+            groupboxFrame.Visible = false
+        end
+        
+        groupbox.Frame = groupboxFrame
+        groupbox.ContentFrame = contentFrame
+        
+        -- Add all Linoria-style methods to groupbox
+        for methodName, method in pairs(self.GroupboxMethods) do
+            groupbox[methodName] = function(...)
+                return method(groupbox, ...)
+            end
+        end
+        
+        return groupbox
     end
     
     function window:Destroy()
@@ -549,516 +736,694 @@ function NexusUI:CreateWindow(config)
 end
 
 -- ========================================
--- GROUPBOX CREATION
+-- GROUPBOX METHODS (All Linoria functionality)
 -- ========================================
-function NexusUI:CreateGroupbox(parent, config)
+NexusUI.GroupboxMethods = {}
+
+function NexusUI.GroupboxMethods:AddLabel(config)
+    if type(config) == "string" then
+        config = {Text = config}
+    end
+    
+    local label = NexusUI:CreateLabel({
+        Size = UDim2.new(1, 0, 0, 20),
+        Text = config.Text or "Label",
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        ZIndex = 1003,
+        Parent = self.ContentFrame
+    })
+    
+    table.insert(self.Elements, label)
+    table.insert(NexusUI.Labels, label)
+    
+    function label:SetText(newText)
+        label.Text = newText
+    end
+    
+    return label
+end
+
+function NexusUI.GroupboxMethods:AddButton(config)
+    if type(config) == "string" then
+        config = {Text = config}
+    end
+    
+    local button = {}
+    
+    local buttonFrame = NexusUI:Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = NexusUI.Colors.PinkMedium,
+        BorderSizePixel = 0,
+        Text = config.Text or "Button",
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        AutoButtonColor = false,
+        ZIndex = 1003,
+        Parent = self.ContentFrame
+    })
+    
+    local corner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(0, 8),
+        Parent = buttonFrame
+    })
+    
+    -- Hover effects
+    buttonFrame.MouseEnter:Connect(function()
+        TweenService:Create(buttonFrame, TweenInfo.new(0.2), {
+            BackgroundColor3 = NexusUI.Colors.PinkBright
+        }):Play()
+    end)
+    
+    buttonFrame.MouseLeave:Connect(function()
+        TweenService:Create(buttonFrame, TweenInfo.new(0.2), {
+            BackgroundColor3 = NexusUI.Colors.PinkMedium
+        }):Play()
+    end)
+    
+    buttonFrame.MouseButton1Click:Connect(function()
+        if config.Callback then
+            config.Callback()
+        end
+    end)
+    
+    function button:SetText(newText)
+        buttonFrame.Text = newText
+    end
+    
+    function button:SetVisible(visible)
+        buttonFrame.Visible = visible
+    end
+    
+    table.insert(self.Elements, button)
+    table.insert(NexusUI.Buttons, button)
+    
+    return button
+end
+
+function NexusUI.GroupboxMethods:AddToggle(config)
     config = config or {}
-    local groupbox = {
-        Elements = {},
-        Visible = true
+    local toggle = {
+        Value = config.Default or false,
+        Type = "Toggle"
     }
     
-    local groupboxFrame = self:Create("Frame", {
-        Size = config.Size or UDim2.new(1, 0, 0, 200),
-        BackgroundColor3 = self.Colors.Primary,
-        BorderSizePixel = 0,
-        ZIndex = 1002,
-        Parent = parent
-    })
-    
-    local corner = self:Create("UICorner", {
-        CornerRadius = UDim.new(0, 12),
-        Parent = groupboxFrame
-    })
-    
-    local stroke = self:Create("UIStroke", {
-        Color = self.Colors.Border,
-        Thickness = 1,
-        Parent = groupboxFrame
-    })
-    
-    local titleLabel = self:CreateLabel({
-        Size = UDim2.new(1, -20, 0, 30),
-        Position = UDim2.new(0, 10, 0, 5),
-        Text = config.Title or "Groupbox",
-        TextColor3 = self.Colors.TextPrimary,
-        TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 1003,
-        Parent = groupboxFrame
-    })
-    
-    local contentFrame = self:Create("Frame", {
-        Size = UDim2.new(1, -20, 1, -40),
-        Position = UDim2.new(0, 10, 0, 35),
+    local toggleFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
         BackgroundTransparency = 1,
-        ZIndex = 1002,
-        Parent = groupboxFrame
+        ZIndex = 1003,
+        Parent = self.ContentFrame
     })
     
-    local layout = self:Create("UIListLayout", {
-        Padding = UDim.new(0, 5),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = contentFrame
+    local toggleButton = NexusUI:Create("TextButton", {
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(0, 0, 0, 5),
+        BackgroundColor3 = NexusUI.Colors.Primary,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 1004,
+        Parent = toggleFrame
     })
     
-    -- Groupbox methods
-    function groupbox:AddLabel(text)
-        local label = self:CreateLabel({
-            Size = UDim2.new(1, 0, 0, 20),
-            Text = text,
-            TextColor3 = self.Colors.TextSecondary,
-            TextSize = 14,
-            Font = Enum.Font.Gotham,
-            ZIndex = 1003,
-            Parent = contentFrame
-        })
-        
-        table.insert(groupbox.Elements, label)
-        return label
+    local toggleCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(0, 4),
+        Parent = toggleButton
+    })
+    
+    local toggleStroke = NexusUI:Create("UIStroke", {
+        Color = NexusUI.Colors.Border,
+        Thickness = 1,
+        Parent = toggleButton
+    })
+    
+    local toggleLabel = NexusUI:CreateLabel({
+        Size = UDim2.new(1, -25, 1, 0),
+        Position = UDim2.new(0, 25, 0, 0),
+        Text = config.Text or "Toggle",
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 1004,
+        Parent = toggleFrame
+    })
+    
+    local function updateToggle()
+        if toggle.Value then
+            toggleButton.BackgroundColor3 = NexusUI.Colors.PinkMedium
+        else
+            toggleButton.BackgroundColor3 = NexusUI.Colors.Primary
+        end
     end
     
-    function groupbox:AddButton(config)
-        config = config or {}
-        local button = {}
-        
-        local buttonFrame = self:Create("TextButton", {
-            Size = UDim2.new(1, 0, 0, 30),
-            BackgroundColor3 = self.Colors.PinkMedium,
-            BorderSizePixel = 0,
-            Text = config.Text or "Button",
-            TextColor3 = self.Colors.TextPrimary,
-            TextSize = 14,
-            Font = Enum.Font.Gotham,
-            AutoButtonColor = false,
-            ZIndex = 1003,
-            Parent = contentFrame
-        })
-        
-        local corner = self:Create("UICorner", {
-            CornerRadius = UDim.new(0, 8),
-            Parent = buttonFrame
-        })
-        
-        -- Hover effects
-        buttonFrame.MouseEnter:Connect(function()
-            TweenService:Create(buttonFrame, TweenInfo.new(0.2), {
-                BackgroundColor3 = self.Colors.PinkBright
-            }):Play()
-        end)
-        
-        buttonFrame.MouseLeave:Connect(function()
-            TweenService:Create(buttonFrame, TweenInfo.new(0.2), {
-                BackgroundColor3 = self.Colors.PinkMedium
-            }):Play()
-        end)
-        
-        buttonFrame.MouseButton1Click:Connect(function()
-            if config.Callback then
-                config.Callback()
-            end
-        end)
-        
-        function button:SetText(newText)
-            buttonFrame.Text = newText
-        end
-        
-        function button:SetVisible(visible)
-            buttonFrame.Visible = visible
-        end
-        
-        table.insert(groupbox.Elements, button)
-        table.insert(self.Buttons, button)
-        
-        return button
-    end
-    
-    function groupbox:AddToggle(config)
-        config = config or {}
-        local toggle = {
-            Value = config.Default or false,
-            Type = "Toggle"
-        }
-        
-        local toggleFrame = self:Create("Frame", {
-            Size = UDim2.new(1, 0, 0, 30),
-            BackgroundTransparency = 1,
-            ZIndex = 1003,
-            Parent = contentFrame
-        })
-        
-        local toggleButton = self:Create("TextButton", {
-            Size = UDim2.new(0, 20, 0, 20),
-            Position = UDim2.new(0, 0, 0, 5),
-            BackgroundColor3 = self.Colors.Primary,
-            BorderSizePixel = 0,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 1004,
-            Parent = toggleFrame
-        })
-        
-        local toggleCorner = self:Create("UICorner", {
-            CornerRadius = UDim.new(0, 4),
-            Parent = toggleButton
-        })
-        
-        local toggleStroke = self:Create("UIStroke", {
-            Color = self.Colors.Border,
-            Thickness = 1,
-            Parent = toggleButton
-        })
-        
-        local toggleLabel = self:CreateLabel({
-            Size = UDim2.new(1, -25, 1, 0),
-            Position = UDim2.new(0, 25, 0, 0),
-            Text = config.Text or "Toggle",
-            TextColor3 = self.Colors.TextPrimary,
-            TextSize = 14,
-            Font = Enum.Font.Gotham,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 1004,
-            Parent = toggleFrame
-        })
-        
-        local function updateToggle()
-            if toggle.Value then
-                toggleButton.BackgroundColor3 = self.Colors.PinkMedium
-            else
-                toggleButton.BackgroundColor3 = self.Colors.Primary
-            end
-        end
-        
-        toggleButton.MouseButton1Click:Connect(function()
-            toggle.Value = not toggle.Value
-            updateToggle()
-            
-            if config.Callback then
-                config.Callback(toggle.Value)
-            end
-            
-            if config.Changed then
-                config.Changed(toggle.Value)
-            end
-        end)
-        
-        function toggle:SetValue(value)
-            toggle.Value = value
-            updateToggle()
-        end
-        
-        function toggle:OnChanged(callback)
-            config.Changed = callback
-        end
-        
+    toggleButton.MouseButton1Click:Connect(function()
+        toggle.Value = not toggle.Value
         updateToggle()
-        table.insert(groupbox.Elements, toggle)
-        table.insert(self.Toggles, toggle)
         
-        return toggle
+        if config.Callback then
+            config.Callback(toggle.Value)
+        end
+        
+        if toggle.Changed then
+            toggle.Changed(toggle.Value)
+        end
+    end)
+    
+    function toggle:SetValue(value)
+        toggle.Value = value
+        updateToggle()
     end
     
-    function groupbox:AddSlider(config)
-        config = config or {}
-        local slider = {
-            Value = config.Default or config.Min or 0,
-            Min = config.Min or 0,
-            Max = config.Max or 100,
-            Type = "Slider"
-        }
-        
-        local sliderFrame = self:Create("Frame", {
-            Size = UDim2.new(1, 0, 0, 50),
-            BackgroundTransparency = 1,
-            ZIndex = 1003,
-            Parent = contentFrame
-        })
-        
-        local sliderLabel = self:CreateLabel({
-            Size = UDim2.new(1, 0, 0, 20),
-            Text = config.Text or "Slider",
-            TextColor3 = self.Colors.TextPrimary,
-            TextSize = 14,
-            Font = Enum.Font.Gotham,
-            ZIndex = 1004,
-            Parent = sliderFrame
-        })
-        
-        local valueLabel = self:CreateLabel({
-            Size = UDim2.new(0, 60, 0, 20),
-            Position = UDim2.new(1, -60, 0, 0),
-            Text = tostring(slider.Value),
-            TextColor3 = self.Colors.TextSecondary,
-            TextSize = 12,
-            Font = Enum.Font.Gotham,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 1004,
-            Parent = sliderFrame
-        })
-        
-        local trackFrame = self:Create("Frame", {
-            Size = UDim2.new(1, 0, 0, 4),
-            Position = UDim2.new(0, 0, 0, 25),
-            BackgroundColor3 = self.Colors.Primary,
-            BorderSizePixel = 0,
-            ZIndex = 1004,
-            Parent = sliderFrame
-        })
-        
-        local trackCorner = self:Create("UICorner", {
-            CornerRadius = UDim.new(1, 0),
-            Parent = trackFrame
-        })
-        
-        local fillFrame = self:Create("Frame", {
-            Size = UDim2.new(0, 0, 1, 0),
-            BackgroundColor3 = self.Colors.PinkMedium,
-            BorderSizePixel = 0,
-            ZIndex = 1005,
-            Parent = trackFrame
-        })
-        
-        local fillCorner = self:Create("UICorner", {
-            CornerRadius = UDim.new(1, 0),
-            Parent = fillFrame
-        })
-        
-        local thumbFrame = self:Create("Frame", {
-            Size = UDim2.new(0, 12, 0, 12),
-            Position = UDim2.new(0, 0, 0.5, -6),
-            BackgroundColor3 = self.Colors.PinkBright,
-            BorderSizePixel = 0,
-            ZIndex = 1006,
-            Parent = trackFrame
-        })
-        
-        local thumbCorner = self:Create("UICorner", {
-            CornerRadius = UDim.new(1, 0),
-            Parent = thumbFrame
-        })
-        
-        local function updateSlider()
-            local percentage = (slider.Value - slider.Min) / (slider.Max - slider.Min)
-            fillFrame.Size = UDim2.new(percentage, 0, 1, 0)
-            thumbFrame.Position = UDim2.new(percentage, -6, 0.5, -6)
-            valueLabel.Text = tostring(slider.Value)
-        end
-        
-        local dragging = false
-        trackFrame.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
+    function toggle:OnChanged(callback)
+        toggle.Changed = callback
+    end
+    
+    updateToggle()
+    table.insert(self.Elements, toggle)
+    table.insert(NexusUI.Toggles, toggle)
+    
+    return toggle
+end
+
+function NexusUI.GroupboxMethods:AddSlider(config)
+    config = config or {}
+    local slider = {
+        Value = config.Default or config.Min or 0,
+        Min = config.Min or 0,
+        Max = config.Max or 100,
+        Type = "Slider"
+    }
+    
+    local sliderFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 50),
+        BackgroundTransparency = 1,
+        ZIndex = 1003,
+        Parent = self.ContentFrame
+    })
+    
+    local sliderLabel = NexusUI:CreateLabel({
+        Size = UDim2.new(1, 0, 0, 20),
+        Text = config.Text or "Slider",
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        ZIndex = 1004,
+        Parent = sliderFrame
+    })
+    
+    local valueLabel = NexusUI:CreateLabel({
+        Size = UDim2.new(0, 60, 0, 20),
+        Position = UDim2.new(1, -60, 0, 0),
+        Text = tostring(slider.Value),
+        TextColor3 = NexusUI.Colors.TextSecondary,
+        TextSize = 12,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        ZIndex = 1004,
+        Parent = sliderFrame
+    })
+    
+    local trackFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 4),
+        Position = UDim2.new(0, 0, 0, 25),
+        BackgroundColor3 = NexusUI.Colors.Primary,
+        BorderSizePixel = 0,
+        ZIndex = 1004,
+        Parent = sliderFrame
+    })
+    
+    local trackCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = trackFrame
+    })
+    
+    local fillFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = NexusUI.Colors.PinkMedium,
+        BorderSizePixel = 0,
+        ZIndex = 1005,
+        Parent = trackFrame
+    })
+    
+    local fillCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = fillFrame
+    })
+    
+    local thumbFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(0, 12, 0, 12),
+        Position = UDim2.new(0, 0, 0.5, -6),
+        BackgroundColor3 = NexusUI.Colors.PinkBright,
+        BorderSizePixel = 0,
+        ZIndex = 1006,
+        Parent = trackFrame
+    })
+    
+    local thumbCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = thumbFrame
+    })
+    
+    local function updateSlider()
+        local percentage = (slider.Value - slider.Min) / (slider.Max - slider.Min)
+        fillFrame.Size = UDim2.new(percentage, 0, 1, 0)
+        thumbFrame.Position = UDim2.new(percentage, -6, 0.5, -6)
+        valueLabel.Text = tostring(slider.Value)
+    end
+    
+    local dragging = false
+    trackFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            
+            local connection
+            connection = RunService.Heartbeat:Connect(function()
+                if not dragging then
+                    connection:Disconnect()
+                    return
+                end
                 
-                local connection
-                connection = RunService.Heartbeat:Connect(function()
-                    if not dragging then
-                        connection:Disconnect()
-                        return
-                    end
-                    
-                    local mousePos = UserInputService:GetMouseLocation()
-                    local trackAbsPos = trackFrame.AbsolutePosition
-                    local trackAbsSize = trackFrame.AbsoluteSize
-                    
-                    local relativeX = (mousePos.X - trackAbsPos.X) / trackAbsSize.X
-                    relativeX = math.clamp(relativeX, 0, 1)
-                    
-                    slider.Value = math.floor(slider.Min + (slider.Max - slider.Min) * relativeX)
-                    updateSlider()
-                    
-                    if config.Callback then
-                        config.Callback(slider.Value)
-                    end
-                    
-                    if config.Changed then
-                        config.Changed(slider.Value)
-                    end
-                end)
+                local mousePos = UserInputService:GetMouseLocation()
+                local trackAbsPos = trackFrame.AbsolutePosition
+                local trackAbsSize = trackFrame.AbsoluteSize
                 
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then
-                        dragging = false
-                    end
-                end)
-            end
-        end)
-        
-        function slider:SetValue(value)
-            slider.Value = math.clamp(value, slider.Min, slider.Max)
-            updateSlider()
+                local relativeX = (mousePos.X - trackAbsPos.X) / trackAbsSize.X
+                relativeX = math.clamp(relativeX, 0, 1)
+                
+                slider.Value = math.floor(slider.Min + (slider.Max - slider.Min) * relativeX)
+                updateSlider()
+                
+                if config.Callback then
+                    config.Callback(slider.Value)
+                end
+                
+                if slider.Changed then
+                    slider.Changed(slider.Value)
+                end
+            end)
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
         end
-        
-        function slider:OnChanged(callback)
-            config.Changed = callback
-        end
-        
+    end)
+    
+    function slider:SetValue(value)
+        slider.Value = math.clamp(value, slider.Min, slider.Max)
         updateSlider()
-        table.insert(groupbox.Elements, slider)
-        table.insert(self.Options, slider)
-        
-        return slider
     end
     
-    function groupbox:AddDropdown(config)
-        config = config or {}
-        local dropdown = {
-            Value = config.Default,
-            Values = config.Values or {},
-            Type = "Dropdown",
-            Open = false
-        }
+    function slider:OnChanged(callback)
+        slider.Changed = callback
+    end
+    
+    updateSlider()
+    table.insert(self.Elements, slider)
+    table.insert(NexusUI.Options, slider)
+    
+    return slider
+end
+
+function NexusUI.GroupboxMethods:AddDropdown(config)
+    config = config or {}
+    local dropdown = {
+        Value = config.Default,
+        Values = config.Values or {},
+        Type = "Dropdown",
+        Open = false
+    }
+    
+    local dropdownFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        ZIndex = 1003,
+        Parent = self.ContentFrame
+    })
+    
+    local dropdownButton = NexusUI:Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = NexusUI.Colors.Primary,
+        BorderSizePixel = 0,
+        Text = dropdown.Value or "Select...",
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        AutoButtonColor = false,
+        ZIndex = 1004,
+        Parent = dropdownFrame
+    })
+    
+    local dropdownCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = dropdownButton
+    })
+    
+    local dropdownList = NexusUI:Create("ScrollingFrame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.new(0, 0, 1, 2),
+        BackgroundColor3 = NexusUI.Colors.Primary,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = NexusUI.Colors.PinkMedium,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Visible = false,
+        ZIndex = 1010,
+        Parent = dropdownFrame
+    })
+    
+    local listLayout = NexusUI:Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = dropdownList
+    })
+    
+    local function updateDropdown()
+        dropdownButton.Text = dropdown.Value or "Select..."
+        dropdownList.Visible = dropdown.Open
         
-        local dropdownFrame = self:Create("Frame", {
+        if dropdown.Open then
+            TweenService:Create(dropdownList, TweenInfo.new(0.2), {
+                Size = UDim2.new(1, 0, 0, math.min(#dropdown.Values * 30, 150))
+            }):Play()
+        else
+            TweenService:Create(dropdownList, TweenInfo.new(0.2), {
+                Size = UDim2.new(1, 0, 0, 0)
+            }):Play()
+        end
+    end
+    
+    local function createOption(option)
+        local optionButton = NexusUI:Create("TextButton", {
             Size = UDim2.new(1, 0, 0, 30),
-            BackgroundTransparency = 1,
-            ZIndex = 1003,
-            Parent = contentFrame
-        })
-        
-        local dropdownButton = self:Create("TextButton", {
-            Size = UDim2.new(1, 0, 0, 30),
-            BackgroundColor3 = self.Colors.Primary,
+            BackgroundColor3 = NexusUI.Colors.Primary,
             BorderSizePixel = 0,
-            Text = dropdown.Value or "Select...",
-            TextColor3 = self.Colors.TextPrimary,
+            Text = option,
+            TextColor3 = NexusUI.Colors.TextPrimary,
             TextSize = 14,
             Font = Enum.Font.Gotham,
             AutoButtonColor = false,
-            ZIndex = 1004,
-            Parent = dropdownFrame
-        })
-        
-        local dropdownCorner = self:Create("UICorner", {
-            CornerRadius = UDim.new(0, 6),
-            Parent = dropdownButton
-        })
-        
-        local dropdownList = self:Create("ScrollingFrame", {
-            Size = UDim2.new(1, 0, 0, 0),
-            Position = UDim2.new(0, 0, 1, 2),
-            BackgroundColor3 = self.Colors.Primary,
-            BorderSizePixel = 0,
-            ScrollBarThickness = 3,
-            ScrollBarImageColor3 = self.Colors.PinkMedium,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            Visible = false,
-            ZIndex = 1010,
-            Parent = dropdownFrame
-        })
-        
-        local listLayout = self:Create("UIListLayout", {
-            SortOrder = Enum.SortOrder.LayoutOrder,
+            ZIndex = 1011,
             Parent = dropdownList
         })
         
-        local function updateDropdown()
-            dropdownButton.Text = dropdown.Value or "Select..."
-            dropdownList.Visible = dropdown.Open
+        optionButton.MouseEnter:Connect(function()
+            TweenService:Create(optionButton, TweenInfo.new(0.2), {
+                BackgroundColor3 = NexusUI.Colors.HoverPrimary
+            }):Play()
+        end)
+        
+        optionButton.MouseLeave:Connect(function()
+            TweenService:Create(optionButton, TweenInfo.new(0.2), {
+                BackgroundColor3 = NexusUI.Colors.Primary
+            }):Play()
+        end)
+        
+        optionButton.MouseButton1Click:Connect(function()
+            dropdown.Value = option
+            dropdown.Open = false
+            updateDropdown()
             
-            if dropdown.Open then
-                TweenService:Create(dropdownList, TweenInfo.new(0.2), {
-                    Size = UDim2.new(1, 0, 0, math.min(#dropdown.Values * 30, 150))
-                }):Play()
-            else
-                TweenService:Create(dropdownList, TweenInfo.new(0.2), {
-                    Size = UDim2.new(1, 0, 0, 0)
-                }):Play()
+            if config.Callback then
+                config.Callback(option)
             end
-        end
+            
+            if dropdown.Changed then
+                dropdown.Changed(option)
+            end
+        end)
+    end
+    
+    for _, option in ipairs(dropdown.Values) do
+        createOption(option)
+    end
+    
+    dropdownList.CanvasSize = UDim2.new(0, 0, 0, #dropdown.Values * 30)
+    
+    dropdownButton.MouseButton1Click:Connect(function()
+        dropdown.Open = not dropdown.Open
+        updateDropdown()
+    end)
+    
+    function dropdown:SetValue(value)
+        dropdown.Value = value
+        updateDropdown()
+    end
+    
+    function dropdown:SetOptions(options)
+        dropdown.Values = options
+        dropdownList:ClearAllChildren()
+        dropdownList:AddChild(listLayout)
         
-        local function createOption(option)
-            local optionButton = self:Create("TextButton", {
-                Size = UDim2.new(1, 0, 0, 30),
-                BackgroundColor3 = self.Colors.Primary,
-                BorderSizePixel = 0,
-                Text = option,
-                TextColor3 = self.Colors.TextPrimary,
-                TextSize = 14,
-                Font = Enum.Font.Gotham,
-                AutoButtonColor = false,
-                ZIndex = 1011,
-                Parent = dropdownList
-            })
-            
-            optionButton.MouseEnter:Connect(function()
-                TweenService:Create(optionButton, TweenInfo.new(0.2), {
-                    BackgroundColor3 = self.Colors.HoverPrimary
-                }):Play()
-            end)
-            
-            optionButton.MouseLeave:Connect(function()
-                TweenService:Create(optionButton, TweenInfo.new(0.2), {
-                    BackgroundColor3 = self.Colors.Primary
-                }):Play()
-            end)
-            
-            optionButton.MouseButton1Click:Connect(function()
-                dropdown.Value = option
-                dropdown.Open = false
-                updateDropdown()
-                
-                if config.Callback then
-                    config.Callback(option)
-                end
-                
-                if config.Changed then
-                    config.Changed(option)
-                end
-            end)
-        end
-        
-        for _, option in ipairs(dropdown.Values) do
+        for _, option in ipairs(options) do
             createOption(option)
         end
         
-        dropdownList.CanvasSize = UDim2.new(0, 0, 0, #dropdown.Values * 30)
+        dropdownList.CanvasSize = UDim2.new(0, 0, 0, #options * 30)
+    end
+    
+    function dropdown:OnChanged(callback)
+        dropdown.Changed = callback
+    end
+    
+    updateDropdown()
+    table.insert(self.Elements, dropdown)
+    table.insert(NexusUI.Options, dropdown)
+    
+    return dropdown
+end
+
+function NexusUI.GroupboxMethods:AddInput(config)
+    config = config or {}
+    local input = {
+        Value = config.Default or "",
+        Type = "Input"
+    }
+    
+    local inputFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        ZIndex = 1003,
+        Parent = self.ContentFrame
+    })
+    
+    local inputLabel = NexusUI:CreateLabel({
+        Size = UDim2.new(0.4, 0, 1, 0),
+        Text = config.Text or "Input:",
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 1004,
+        Parent = inputFrame
+    })
+    
+    local textBox = NexusUI:Create("TextBox", {
+        Size = UDim2.new(0.6, 0, 1, 0),
+        Position = UDim2.new(0.4, 0, 0, 0),
+        BackgroundColor3 = NexusUI.Colors.Primary,
+        BorderSizePixel = 0,
+        Text = input.Value,
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        PlaceholderText = config.Placeholder or "Enter text...",
+        ZIndex = 1004,
+        Parent = inputFrame
+    })
+    
+    local textBoxCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = textBox
+    })
+    
+    textBox.FocusLost:Connect(function()
+        input.Value = textBox.Text
         
-        dropdownButton.MouseButton1Click:Connect(function()
-            dropdown.Open = not dropdown.Open
-            updateDropdown()
-        end)
-        
-        function dropdown:SetValue(value)
-            dropdown.Value = value
-            updateDropdown()
+        if config.Callback then
+            config.Callback(input.Value)
         end
         
-        function dropdown:SetOptions(options)
-            dropdown.Values = options
-            dropdownList:ClearAllChildren()
-            dropdownList:AddChild(listLayout)
-            
-            for _, option in ipairs(options) do
-                createOption(option)
+        if input.Changed then
+            input.Changed(input.Value)
+        end
+    end)
+    
+    function input:SetValue(value)
+        input.Value = value
+        textBox.Text = value
+    end
+    
+    function input:OnChanged(callback)
+        input.Changed = callback
+    end
+    
+    table.insert(self.Elements, input)
+    table.insert(NexusUI.Options, input)
+    
+    return input
+end
+
+function NexusUI.GroupboxMethods:AddKeybind(config)
+    config = config or {}
+    local keybind = {
+        Value = config.Default or "None",
+        Type = "Keybind",
+        Listening = false
+    }
+    
+    local keybindFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        ZIndex = 1003,
+        Parent = self.ContentFrame
+    })
+    
+    local keybindLabel = NexusUI:CreateLabel({
+        Size = UDim2.new(0.6, 0, 1, 0),
+        Text = config.Text or "Keybind:",
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 1004,
+        Parent = keybindFrame
+    })
+    
+    local keybindButton = NexusUI:Create("TextButton", {
+        Size = UDim2.new(0.4, 0, 1, 0),
+        Position = UDim2.new(0.6, 0, 0, 0),
+        BackgroundColor3 = NexusUI.Colors.Primary,
+        BorderSizePixel = 0,
+        Text = keybind.Value,
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 12,
+        Font = Enum.Font.Gotham,
+        AutoButtonColor = false,
+        ZIndex = 1004,
+        Parent = keybindFrame
+    })
+    
+    local keybindCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = keybindButton
+    })
+    
+    keybindButton.MouseButton1Click:Connect(function()
+        keybind.Listening = true
+        keybindButton.Text = "..."
+        keybindButton.BackgroundColor3 = NexusUI.Colors.PinkMedium
+        
+        local connection
+        connection = UserInputService.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                keybind.Value = input.KeyCode.Name
+                keybindButton.Text = keybind.Value
+                keybind.Listening = false
+                keybindButton.BackgroundColor3 = NexusUI.Colors.Primary
+                connection:Disconnect()
+                
+                if config.Callback then
+                    config.Callback(keybind.Value)
+                end
+                
+                if keybind.Changed then
+                    keybind.Changed(keybind.Value)
+                end
             end
-            
-            dropdownList.CanvasSize = UDim2.new(0, 0, 0, #options * 30)
-        end
-        
-        function dropdown:OnChanged(callback)
-            config.Changed = callback
-        end
-        
-        updateDropdown()
-        table.insert(groupbox.Elements, dropdown)
-        table.insert(self.Options, dropdown)
-        
-        return dropdown
+        end)
+    end)
+    
+    function keybind:SetValue(value)
+        keybind.Value = value
+        keybindButton.Text = value
     end
     
-    function groupbox:SetVisible(visible)
-        groupboxFrame.Visible = visible
-        groupbox.Visible = visible
+    function keybind:OnChanged(callback)
+        keybind.Changed = callback
     end
     
-    groupbox.Frame = groupboxFrame
-    groupbox.ContentFrame = contentFrame
+    table.insert(self.Elements, keybind)
+    table.insert(NexusUI.Options, keybind)
     
-    return groupbox
+    return keybind
+end
+
+function NexusUI.GroupboxMethods:AddColorpicker(config)
+    config = config or {}
+    local colorpicker = {
+        Value = config.Default or Color3.fromRGB(255, 255, 255),
+        Type = "Colorpicker"
+    }
+    
+    local colorpickerFrame = NexusUI:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        ZIndex = 1003,
+        Parent = self.ContentFrame
+    })
+    
+    local colorpickerLabel = NexusUI:CreateLabel({
+        Size = UDim2.new(0.6, 0, 1, 0),
+        Text = config.Text or "Color:",
+        TextColor3 = NexusUI.Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 1004,
+        Parent = colorpickerFrame
+    })
+    
+    local colorButton = NexusUI:Create("TextButton", {
+        Size = UDim2.new(0.4, 0, 1, 0),
+        Position = UDim2.new(0.6, 0, 0, 0),
+        BackgroundColor3 = colorpicker.Value,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 1004,
+        Parent = colorpickerFrame
+    })
+    
+    local colorCorner = NexusUI:Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = colorButton
+    })
+    
+    local colorStroke = NexusUI:Create("UIStroke", {
+        Color = NexusUI.Colors.Border,
+        Thickness = 1,
+        Parent = colorButton
+    })
+    
+    colorButton.MouseButton1Click:Connect(function()
+        -- Simple color picker implementation
+        -- In a full implementation, you'd create a color picker UI
+        if config.Callback then
+            config.Callback(colorpicker.Value)
+        end
+    end)
+    
+    function colorpicker:SetValue(value)
+        colorpicker.Value = value
+        colorButton.BackgroundColor3 = value
+    end
+    
+    function colorpicker:OnChanged(callback)
+        colorpicker.Changed = callback
+    end
+    
+    table.insert(self.Elements, colorpicker)
+    table.insert(NexusUI.Options, colorpicker)
+    
+    return colorpicker
 end
 
 -- ========================================
--- NOTIFICATION SYSTEM
+-- NOTIFICATION SYSTEM (Linoria equivalent)
 -- ========================================
 function NexusUI:Notify(title, message, duration)
     duration = duration or 5
@@ -1135,8 +1500,15 @@ end
 -- INITIALIZATION
 -- ========================================
 function NexusUI:Init()
-    -- Library is now ready to use
     self.Initialized = true
+    
+    -- Make global (like Linoria)
+    getgenv().NexusUI = self
+    getgenv().Toggles = self.Toggles
+    getgenv().Options = self.Options
+    getgenv().Labels = self.Labels
+    getgenv().Buttons = self.Buttons
+    
     return self
 end
 
