@@ -1,21 +1,26 @@
--- Nexus UI Library (Max Money Style with Particles)
--- =================================================
+-- Nexus UI Library (Max Money Style with Full Functionality)
+-- Combines the visual design of AutoDupe GUI with Linoria's element functionality
 
 local NexusUI = {}
+local cloneref = (cloneref or clonereference or function(instance) return instance end)
 
 -- Services
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local TextService = game:GetService("TextService")
+local UserInputService = cloneref(game:GetService('UserInputService'))
+local TextService = cloneref(game:GetService('TextService'))
+local CoreGui = cloneref(game:GetService('CoreGui'))
+local RunService = cloneref(game:GetService('RunService'))
+local TweenService = cloneref(game:GetService('TweenService'))
+local RenderStepped = RunService.RenderStepped
 
--- Local references
+-- Constants
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
--- Color Scheme (Max Money Style)
-NexusUI.Colors = {
+-- ========================================
+-- MAX MONEY STYLE COLOR SCHEME
+-- ========================================
+local Colors = {
     Background = Color3.fromRGB(15, 8, 15),
     Surface = Color3.fromRGB(25, 15, 25),
     Primary = Color3.fromRGB(40, 25, 35),
@@ -40,64 +45,73 @@ NexusUI.Colors = {
     PinkNeon = Color3.fromRGB(255, 60, 160)
 }
 
--- Particle System
-NexusUI.ParticleState = {
+-- ========================================
+-- CORE LIBRARY SETUP
+-- ========================================
+local ScreenGui = Instance.new('ScreenGui')
+ScreenGui.Name = "NexusUILibrary"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+ScreenGui.DisplayOrder = 999
+ScreenGui.ResetOnSpawn = false
+
+if gethui then
+    ScreenGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = CoreGui
+end
+
+-- Global tables
+local Toggles = {}
+local Options = {}
+local Labels = {}
+local Buttons = {}
+
+-- Library table
+local Library = {
+    Toggles = Toggles,
+    Options = Options,
+    Labels = Labels,
+    Buttons = Buttons,
+    ScreenGui = ScreenGui,
+    
+    -- Colors
+    FontColor = Colors.TextPrimary,
+    MainColor = Colors.Surface,
+    BackgroundColor = Colors.Background,
+    AccentColor = Colors.PinkMedium,
+    OutlineColor = Colors.Border,
+    
+    -- States
+    OpenedFrames = {},
+    Registry = {},
+    RegistryMap = {},
+    Signals = {},
+    
+    -- Settings
+    ShowCustomCursor = true,
+    IsMobile = (UserInputService.TouchEnabled and not UserInputService.MouseEnabled),
+    CanDrag = true
+}
+
+-- ========================================
+-- PARTICLE SYSTEM (MAX MONEY STYLE)
+-- ========================================
+local ParticleState = {
     Particles = {},
     IsDestroyed = false,
     MousePosition = {X = 0, Y = 0},
     GuiBounds = {MinX = 0, MaxX = 0, MinY = 0, MaxY = 0}
 }
 
--- Utility Functions
-function NexusUI:Create(className, properties)
-    local instance = Instance.new(className)
-    for property, value in pairs(properties) do
-        instance[property] = value
-    end
-    return instance
-end
-
-function NexusUI:ApplyTextStroke(instance)
-    local stroke = self:Create("UIStroke", {
-        Color = Color3.new(0, 0, 0),
-        Thickness = 1,
-        LineJoinMode = Enum.LineJoinMode.Miter,
-        Parent = instance
-    })
-    return stroke
-end
-
-function NexusUI:CreateLabel(properties)
-    local label = self:Create("TextLabel", {
-        BackgroundTransparency = 1,
-        Font = Enum.Font.Gotham,
-        TextColor3 = self.Colors.TextPrimary,
-        TextSize = 14,
-        TextStrokeTransparency = 0,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-    
-    self:ApplyTextStroke(label)
-    
-    for property, value in pairs(properties) do
-        label[property] = value
-    end
-    
-    return label
-end
-
-function NexusUI:GetTextBounds(text, font, size, resolution)
-    local bounds = TextService:GetTextSize(text, size, font, resolution or Vector2.new(1920, 1080))
-    return bounds.X, bounds.Y
-end
-
--- Particle System Functions
-function NexusUI:UpdateGuiBounds(container)
+local function UpdateGuiBounds(container)
     if not container then return end
     local absolutePosition = container.AbsolutePosition
     local absoluteSize = container.AbsoluteSize
     
-    self.ParticleState.GuiBounds = {
+    ParticleState.GuiBounds = {
         MinX = absolutePosition.X,
         MaxX = absolutePosition.X + absoluteSize.X,
         MinY = absolutePosition.Y,
@@ -105,39 +119,49 @@ function NexusUI:UpdateGuiBounds(container)
     }
 end
 
-function NexusUI:CreateParticle(container)
-    if not container or not container.Parent or self.ParticleState.IsDestroyed then
+local function CreateParticle(container)
+    if not container or not container.Parent or ParticleState.IsDestroyed then
         return nil
     end
     
     local size = math.random(8, 24)
-    local particle = self:Create('Frame', {
-        Size = UDim2.new(0, size, 0, size),
-        Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0),
-        BackgroundColor3 = self.Colors.PinkLight,
-        BackgroundTransparency = math.random(60, 85) / 100,
-        BorderSizePixel = 0,
-        ZIndex = 5,
-        Selectable = false,
-        Parent = container
+    local particle = Instance.new('Frame')
+    particle.Size = UDim2.new(0, size, 0, size)
+    
+    local startX = math.random(0, 100) / 100
+    local startY = math.random(0, 100) / 100
+    particle.Position = UDim2.new(startX, 0, startY, 0)
+    
+    particle.BackgroundColor3 = Colors.PinkLight
+    particle.BackgroundTransparency = math.random(60, 85) / 100
+    particle.BorderSizePixel = 0
+    particle.ZIndex = 5
+    particle.Selectable = false
+    particle.Parent = container
+    
+    local corner = Instance.new('UICorner')
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = particle
+    
+    local gradient = Instance.new('UIGradient')
+    local bubbleColors = {
+        Colors.PinkLight,
+        Colors.PinkMedium,
+        Colors.PinkDark,
+        Color3.fromRGB(255, 150, 200)
+    }
+    local color1 = bubbleColors[math.random(#bubbleColors)]
+    local color2 = bubbleColors[math.random(#bubbleColors)]
+    
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, color1),
+        ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 220, 230)),
+        ColorSequenceKeypoint.new(0.7, color2),
+        ColorSequenceKeypoint.new(1, color1)
     })
-
-    local corner = self:Create('UICorner', {
-        CornerRadius = UDim.new(1, 0),
-        Parent = particle
-    })
-
-    local gradient = self:Create('UIGradient', {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, self.Colors.PinkLight),
-            ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 220, 230)),
-            ColorSequenceKeypoint.new(0.7, self.Colors.PinkMedium),
-            ColorSequenceKeypoint.new(1, self.Colors.PinkLight)
-        }),
-        Rotation = math.random(0, 360),
-        Parent = particle
-    })
-
+    gradient.Rotation = math.random(0, 360)
+    gradient.Parent = particle
+    
     local particleData = {
         frame = particle,
         vx = (math.random() - 0.5) * 0.002,
@@ -149,36 +173,35 @@ function NexusUI:CreateParticle(container)
         originalTransparency = particle.BackgroundTransparency,
         lifetime = math.random(30, 60),
         originalSize = size,
-        wobblePhase = math.random() * math.pi * 2,
         repelForce = {x = 0, y = 0},
         mass = size / 10
     }
     
-    table.insert(self.ParticleState.Particles, particleData)
+    table.insert(ParticleState.Particles, particleData)
     return particle
 end
 
-function NexusUI:UpdateParticles(container)
-    if self.ParticleState.IsDestroyed or not container then return end
+local function UpdateParticles(container)
+    if ParticleState.IsDestroyed or not container then return end
     
-    self:UpdateGuiBounds(container)
+    UpdateGuiBounds(container)
     
     local screenSize = container.AbsoluteSize
-    local mouseScreenX = (self.ParticleState.MousePosition.X - self.ParticleState.GuiBounds.MinX) / screenSize.X
-    local mouseScreenY = (self.ParticleState.MousePosition.Y - self.ParticleState.GuiBounds.MinY) / screenSize.Y
+    local mouseScreenX = (ParticleState.MousePosition.X - ParticleState.GuiBounds.MinX) / screenSize.X
+    local mouseScreenY = (ParticleState.MousePosition.Y - ParticleState.GuiBounds.MinY) / screenSize.Y
     
-    for i = #self.ParticleState.Particles, 1, -1 do
-        local p = self.ParticleState.Particles[i]
+    for i = #ParticleState.Particles, 1, -1 do
+        local p = ParticleState.Particles[i]
         
         if not p or not p.frame or not p.frame.Parent then
-            table.remove(self.ParticleState.Particles, i)
+            table.remove(ParticleState.Particles, i)
         else
             local currentPos = p.frame.Position
             local age = tick() - p.created
             
             if age > p.lifetime then
                 p.frame:Destroy()
-                table.remove(self.ParticleState.Particles, i)
+                table.remove(ParticleState.Particles, i)
             else
                 local distanceToMouse = math.sqrt(
                     (currentPos.X.Scale - mouseScreenX)^2 + 
@@ -207,7 +230,6 @@ function NexusUI:UpdateParticles(container)
                 local newX = currentPos.X.Scale + p.vx + p.repelForce.x
                 local newY = currentPos.Y.Scale + p.vy + p.repelForce.y
                 
-                -- Keep particles within GUI bounds
                 if newX < 0 then 
                     newX = 0 
                     p.vx = math.abs(p.vx) * 0.5
@@ -224,20 +246,12 @@ function NexusUI:UpdateParticles(container)
                     p.vy = -math.abs(p.vy) * 0.5
                 end
                 
-                local wobbleTime = tick() * 1.5 + p.wobblePhase
-                newX = newX + math.sin(wobbleTime) * 0.001
-                newY = newY + math.cos(wobbleTime * 0.7) * 0.001
-                
                 p.rotation = p.rotation + p.rotationSpeed
                 p.frame.Rotation = p.rotation
                 
                 local breathe = math.sin(tick() * 2.5 + p.pulsePhase) * 0.1 + 1
                 local currentSize = p.originalSize * breathe
                 p.frame.Size = UDim2.new(0, currentSize, 0, currentSize)
-                
-                local transparencyPulse = math.sin(tick() * 3 + p.pulsePhase) * 0.1
-                local newTransparency = math.max(0.5, math.min(0.95, p.originalTransparency + transparencyPulse))
-                p.frame.BackgroundTransparency = newTransparency
                 
                 p.vx = p.vx * 0.995
                 p.vy = p.vy * 0.998
@@ -248,136 +262,168 @@ function NexusUI:UpdateParticles(container)
     end
 end
 
-function NexusUI:StartParticleSystem(container)
-    self:UpdateGuiBounds(container)
+local function StartParticleSystem(container)
+    UpdateGuiBounds(container)
     
-    -- Mouse tracking
     UserInputService.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             local mousePos = input.Position
-            if mousePos.X >= self.ParticleState.GuiBounds.MinX and mousePos.X <= self.ParticleState.GuiBounds.MaxX and
-               mousePos.Y >= self.ParticleState.GuiBounds.MinY and mousePos.Y <= self.ParticleState.GuiBounds.MaxY then
-                self.ParticleState.MousePosition.X = mousePos.X
-                self.ParticleState.MousePosition.Y = mousePos.Y
+            if mousePos.X >= ParticleState.GuiBounds.MinX and mousePos.X <= ParticleState.GuiBounds.MaxX and
+               mousePos.Y >= ParticleState.GuiBounds.MinY and mousePos.Y <= ParticleState.GuiBounds.MaxY then
+                ParticleState.MousePosition.X = mousePos.X
+                ParticleState.MousePosition.Y = mousePos.Y
             end
         end
     end)
     
-    -- Initial particles
     task.spawn(function()
         for i = 1, 20 do
-            if self.ParticleState.IsDestroyed then break end
-            self:CreateParticle(container)
+            if ParticleState.IsDestroyed then break end
+            CreateParticle(container)
             task.wait(math.random(20, 100) / 1000)
         end
         
-        -- Continuous generation
-        while not self.ParticleState.IsDestroyed and container.Parent do
-            if #self.ParticleState.Particles < 40 then
-                self:CreateParticle(container)
+        while not ParticleState.IsDestroyed and container.Parent do
+            if #ParticleState.Particles < 40 then
+                CreateParticle(container)
             end
             task.wait(math.random(400, 1200) / 1000)
         end
     end)
     
-    -- Update loop
     task.spawn(function()
-        while not self.ParticleState.IsDestroyed and container.Parent do
-            pcall(function() self:UpdateParticles(container) end)
+        while not ParticleState.IsDestroyed and container.Parent do
+            pcall(function() UpdateParticles(container) end)
             task.wait(1/60)
         end
     end)
 end
 
-function NexusUI:StopParticleSystem()
-    self.ParticleState.IsDestroyed = true
-    for _, particle in ipairs(self.ParticleState.Particles) do
-        if particle.frame then
-            particle.frame:Destroy()
-        end
+-- ========================================
+-- UTILITY FUNCTIONS
+-- ========================================
+function Library:SafeCallback(Func, ...)
+    if not (Func and typeof(Func) == "function") then
+        return
     end
-    self.ParticleState.Particles = {}
+
+    local run = function(func, ...)
+        local Success, Response = pcall(func, ...)
+        if Success then
+            return Response
+        end
+        warn("NexusUI Callback Error:", Response)
+    end
+
+    task.spawn(run, Func, ...)
 end
 
--- Window Creation
-function NexusUI:CreateWindow(options)
-    options = options or {}
-    local window = {
-        Name = options.Name or "NexusUI Window",
-        Size = options.Size or UDim2.new(0, 400, 0, 500),
-        Position = options.Position or UDim2.new(0.5, -200, 0.5, -250),
-        MinSize = options.MinSize or Vector2.new(300, 400)
+function Library:Create(Class, Properties)
+    local _Instance = typeof(Class) == "string" and Instance.new(Class) or Class
+
+    for Property, Value in next, Properties do
+        local success = pcall(function()
+            _Instance[Property] = Value
+        end)
+        if not success then
+            warn(`Failed to set property {Property} on {_Instance.ClassName}`)
+        end
+    end
+
+    return _Instance
+end
+
+function Library:AddToRegistry(Instance, Properties)
+    local Idx = #Library.Registry + 1
+    local Data = {
+        Instance = Instance,
+        Properties = Properties,
+        Idx = Idx
     }
+
+    table.insert(Library.Registry, Data)
+    Library.RegistryMap[Instance] = Data
+end
+
+function Library:MouseIsOverOpenedFrame()
+    for Frame, _ in next, Library.OpenedFrames do
+        local AbsPos, AbsSize = Frame.AbsolutePosition, Frame.AbsoluteSize
+        if Mouse.X >= AbsPos.X and Mouse.X <= AbsPos.X + AbsSize.X and
+           Mouse.Y >= AbsPos.Y and Mouse.Y <= AbsPos.Y + AbsSize.Y then
+            return true
+        end
+    end
+    return false
+end
+
+-- ========================================
+-- WINDOW CREATION (MAX MONEY STYLE)
+-- ========================================
+function Library:CreateWindow(Config)
+    Config = Config or {}
     
-    -- ScreenGui
-    window.ScreenGui = self:Create("ScreenGui", {
-        Name = "NexusUI_" .. window.Name,
-        Parent = LocalPlayer:WaitForChild("PlayerGui"),
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    })
-    
+    local Window = {
+        Tabs = {},
+        Groupboxes = {}
+    }
+
     -- Main Container
-    window.MainContainer = self:Create("Frame", {
-        Name = "MainContainer",
-        Size = window.Size,
-        Position = window.Position,
-        BackgroundColor3 = self.Colors.Surface,
-        BackgroundTransparency = 0,
+    local MainContainer = Library:Create("Frame", {
+        Size = Config.Size or UDim2.new(0, 550, 0, 600),
+        Position = Config.Position or UDim2.new(0.5, -275, 0.5, -300),
+        BackgroundColor3 = Colors.Surface,
         BorderSizePixel = 0,
         ZIndex = 1000,
-        Parent = window.ScreenGui
+        Parent = ScreenGui
     })
-    
-    -- Corner and Stroke
-    self:Create("UICorner", {
+
+    local Corner = Library:Create("UICorner", {
         CornerRadius = UDim.new(0, 20),
-        Parent = window.MainContainer
+        Parent = MainContainer
     })
-    
-    self:Create("UIStroke", {
-        Color = self.Colors.PinkMedium,
+
+    local Stroke = Library:Create("UIStroke", {
+        Color = Colors.PinkMedium,
         Thickness = 2,
         Transparency = 0.2,
-        Parent = window.MainContainer
+        Parent = MainContainer
     })
-    
+
     -- Particle Container
-    window.ParticleContainer = self:Create("Frame", {
+    local ParticleContainer = Library:Create("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         ZIndex = 5,
-        Parent = window.MainContainer
+        Parent = MainContainer
     })
-    
+
     -- Animated Border
-    local animatedBorder = self:Create("Frame", {
-        Name = "AnimatedBorder",
+    local AnimatedBorder = Library:Create("Frame", {
         Size = UDim2.new(1, 8, 1, 8),
         Position = UDim2.new(0, -4, 0, -4),
         BackgroundTransparency = 1,
         ZIndex = 999,
-        Parent = window.MainContainer
+        Parent = MainContainer
     })
-    
-    self:Create("UICorner", {
+
+    local BorderCorner = Library:Create("UICorner", {
         CornerRadius = UDim.new(0, 24),
-        Parent = animatedBorder
+        Parent = AnimatedBorder
     })
-    
-    local borderStroke = self:Create("UIStroke", {
-        Color = self.Colors.PinkLight,
+
+    local BorderStroke = Library:Create("UIStroke", {
+        Color = Colors.PinkLight,
         Thickness = 3,
         Transparency = 0.3,
-        Parent = animatedBorder
+        Parent = AnimatedBorder
     })
-    
-    self:Create("UIGradient", {
+
+    local BorderGradient = Library:Create("UIGradient", {
         Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, self.Colors.PinkLight),
-            ColorSequenceKeypoint.new(0.3, self.Colors.PinkMedium),
-            ColorSequenceKeypoint.new(0.7, self.Colors.PinkDark),
-            ColorSequenceKeypoint.new(1, self.Colors.PinkLight)
+            ColorSequenceKeypoint.new(0, Colors.PinkLight),
+            ColorSequenceKeypoint.new(0.3, Colors.PinkMedium),
+            ColorSequenceKeypoint.new(0.7, Colors.PinkDark),
+            ColorSequenceKeypoint.new(1, Colors.PinkLight)
         },
         Transparency = NumberSequence.new{
             NumberSequenceKeypoint.new(0, 0.8),
@@ -385,27 +431,235 @@ function NexusUI:CreateWindow(options)
             NumberSequenceKeypoint.new(0.8, 0.1),
             NumberSequenceKeypoint.new(1, 0.8)
         },
-        Parent = borderStroke
+        Parent = BorderStroke
     })
-    
+
     -- Header
-    window.Header = self:Create("Frame", {
-        Name = "Header",
+    local Header = Library:Create("Frame", {
         Size = UDim2.new(1, 0, 0, 80),
         BackgroundTransparency = 1,
         ZIndex = 1001,
-        Parent = window.MainContainer
+        Parent = MainContainer
     })
-    
-    -- Draggable functionality
-    local dragging, dragInput, dragStart, startPos
-    
-    window.Header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+    local TitleContainer = Library:Create("Frame", {
+        Size = UDim2.new(1, -40, 0, 70),
+        Position = UDim2.new(0, 20, 0, 5),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = Header
+    })
+
+    local NexusText = Library:Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0.5, 0),
+        BackgroundTransparency = 1,
+        Text = "NEXUS",
+        TextColor3 = Colors.TextPrimary,
+        TextScaled = true,
+        Font = Enum.Font.GothamBlack,
+        TextStrokeTransparency = 0.7,
+        TextStrokeColor3 = Colors.PinkDark,
+        ZIndex = 1002,
+        Parent = TitleContainer
+    })
+
+    local NexusGradient = Library:Create("UIGradient", {
+        Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Colors.PinkLight),
+            ColorSequenceKeypoint.new(0.5, Colors.PinkMedium),
+            ColorSequenceKeypoint.new(1, Colors.PinkDark)
+        },
+        Rotation = 45,
+        Parent = NexusText
+    })
+
+    local UItext = Library:Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0.5, 0),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        BackgroundTransparency = 1,
+        Text = "UI LIBRARY",
+        TextColor3 = Colors.TextPrimary,
+        TextScaled = true,
+        Font = Enum.Font.GothamBlack,
+        TextStrokeTransparency = 0.7,
+        TextStrokeColor3 = Colors.PinkDark,
+        ZIndex = 1002,
+        Parent = TitleContainer
+    })
+
+    local UITextGradient = Library:Create("UIGradient", {
+        Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Colors.PinkDark),
+            ColorSequenceKeypoint.new(0.5, Colors.PinkMedium),
+            ColorSequenceKeypoint.new(1, Colors.PinkLight)
+        },
+        Rotation = -45,
+        Parent = UItext
+    })
+
+    -- Content Area
+    local Content = Library:Create("Frame", {
+        Size = UDim2.new(1, -40, 1, -100),
+        Position = UDim2.new(0, 20, 0, 90),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = MainContainer
+    })
+
+    -- Tab Container
+    local TabContainer = Library:Create("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = Content
+    })
+
+    -- Tab Buttons
+    local TabButtons = Library:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = TabContainer
+    })
+
+    local TabListLayout = Library:Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0, 5),
+        Parent = TabButtons
+    })
+
+    -- Tab Content
+    local TabContent = Library:Create("Frame", {
+        Size = UDim2.new(1, 0, 1, -40),
+        Position = UDim2.new(0, 0, 0, 40),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = TabContainer
+    })
+
+    -- Make draggable
+    Library:MakeDraggable(Header, MainContainer)
+
+    -- Start animations and particles
+    Library:StartBorderAnimation(BorderGradient)
+    StartParticleSystem(ParticleContainer)
+
+    -- Window functions
+    function Window:AddTab(Name)
+        local Tab = {
+            Name = Name,
+            Elements = {}
+        }
+
+        -- Tab Button
+        local TabButton = Library:Create("TextButton", {
+            Size = UDim2.new(0, 100, 1, 0),
+            BackgroundColor3 = Colors.Primary,
+            BorderSizePixel = 0,
+            Text = Name,
+            TextColor3 = Colors.TextPrimary,
+            TextSize = 14,
+            Font = Enum.Font.GothamBold,
+            AutoButtonColor = false,
+            ZIndex = 1002,
+            Parent = TabButtons
+        })
+
+        local TabCorner = Library:Create("UICorner", {
+            CornerRadius = UDim.new(0, 8),
+            Parent = TabButton
+        })
+
+        local TabGradient = Library:Create("UIGradient", {
+            Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Colors.PinkDark),
+                ColorSequenceKeypoint.new(1, Colors.PinkMedium)
+            },
+            Rotation = 90,
+            Parent = TabButton
+        })
+
+        -- Tab Content Frame
+        local TabFrame = Library:Create("ScrollingFrame", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = Colors.PinkMedium,
+            Visible = false,
+            ZIndex = 1001,
+            Parent = TabContent
+        })
+
+        local TabLayout = Library:Create("UIListLayout", {
+            Padding = UDim.new(0, 5),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = TabFrame
+        })
+
+        Library:Create("UIPadding", {
+            PaddingTop = UDim.new(0, 5),
+            PaddingLeft = UDim.new(0, 5),
+            Parent = TabFrame
+        })
+
+        -- Tab functionality
+        function Tab:Show()
+            for _, otherTab in pairs(Window.Tabs) do
+                otherTab.Frame.Visible = false
+                otherTab.Button.BackgroundColor3 = Colors.Primary
+            end
+            TabFrame.Visible = true
+            TabButton.BackgroundColor3 = Colors.PinkMedium
+        end
+
+        function Tab:Hide()
+            TabFrame.Visible = false
+            TabButton.BackgroundColor3 = Colors.Primary
+        end
+
+        TabButton.MouseButton1Click:Connect(function()
+            Tab:Show()
+        end)
+
+        -- Store tab
+        Tab.Button = TabButton
+        Tab.Frame = TabFrame
+        Window.Tabs[Name] = Tab
+
+        -- Show first tab
+        if #Window.Tabs == 1 then
+            Tab:Show()
+        end
+
+        return Tab
+    end
+
+    function Window:Toggle()
+        MainContainer.Visible = not MainContainer.Visible
+    end
+
+    -- Make window methods available
+    Window.MainContainer = MainContainer
+    Window.Content = Content
+
+    return Window
+end
+
+-- ========================================
+-- DRAGGABLE FUNCTIONALITY
+-- ========================================
+function Library:MakeDraggable(Frame, MainFrame)
+    Frame.Active = true
+
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
-            startPos = window.MainContainer.Position
-            
+            startPos = MainFrame.Position
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -413,17 +667,17 @@ function NexusUI:CreateWindow(options)
             end)
         end
     end)
-    
-    window.Header.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+
+    Frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
-    
+
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
+        if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            window.MainContainer.Position = UDim2.new(
+            MainFrame.Position = UDim2.new(
                 startPos.X.Scale,
                 startPos.X.Offset + delta.X,
                 startPos.Y.Scale,
@@ -431,526 +685,512 @@ function NexusUI:CreateWindow(options)
             )
         end
     end)
-    
-    -- Start animations and particles
-    local borderTween = TweenService:Create(borderStroke.Gradient, 
-        TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
-        {Rotation = 360})
-    borderTween:Play()
-    
-    self:StartParticleSystem(window.ParticleContainer)
-    
-    -- Window methods
-    function window:SetVisible(visible)
-        self.MainContainer.Visible = visible
-    end
-    
-    function window:Destroy()
-        NexusUI:StopParticleSystem()
-        self.ScreenGui:Destroy()
-    end
-    
-    function window:AddTitle(titleText)
-        local titleContainer = self:Create("Frame", {
-            Size = UDim2.new(1, -40, 0, 60),
-            Position = UDim2.new(0, 20, 0, 10),
-            BackgroundTransparency = 1,
-            ZIndex = 1001,
-            Parent = self.Header
-        })
-        
-        local title = NexusUI:CreateLabel({
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Text = titleText,
-            TextColor3 = NexusUI.Colors.TextPrimary,
-            TextScaled = true,
-            Font = Enum.Font.GothamBlack,
-            TextStrokeTransparency = 0.7,
-            TextStrokeColor3 = NexusUI.Colors.PinkDark,
-            ZIndex = 1002,
-            Parent = titleContainer
-        })
-        
-        NexusUI:Create("UIGradient", {
-            Color = ColorSequence.new{
-                ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkLight),
-                ColorSequenceKeypoint.new(0.5, NexusUI.Colors.PinkMedium),
-                ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkDark)
-            },
-            Rotation = 45,
-            Parent = title
-        })
-        
-        return title
-    end
-    
-    function window:AddContentArea()
-        local content = self:Create("Frame", {
-            Name = "Content",
-            Size = UDim2.new(1, -40, 1, -100),
-            Position = UDim2.new(0, 20, 0, 90),
-            BackgroundTransparency = 1,
-            ZIndex = 1001,
-            Parent = self.MainContainer
-        })
-        
-        return content
-    end
-    
-    return window
 end
 
--- Button Creation
-function NexusUI:CreateButton(options)
-    local button = {
-        Text = options.Text or "Button",
-        Size = options.Size or UDim2.new(1, 0, 0, 40),
-        Position = options.Position or UDim2.new(0, 0, 0, 0),
-        Parent = options.Parent,
-        Callback = options.Callback or function() end
-    }
+-- ========================================
+-- ANIMATION SYSTEM
+-- ========================================
+function Library:StartBorderAnimation(Gradient)
+    local tween = TweenService:Create(Gradient, 
+        TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
+        {Rotation = 360})
+    tween:Play()
+end
+
+-- ========================================
+-- UI ELEMENTS (LINORIA-STYLE FUNCTIONALITY)
+-- ========================================
+function Library:AddToggle(Tab, Config)
+    Config = Config or {}
     
-    button.Outer = self:Create("TextButton", {
-        Size = button.Size,
-        Position = button.Position,
-        BackgroundColor3 = self.Colors.Primary,
+    local Toggle = {
+        Value = Config.Default or false,
+        Type = "Toggle",
+        Callback = Config.Callback or function() end
+    }
+
+    local ToggleFrame = Library:Create("Frame", {
+        Size = UDim2.new(1, -10, 0, 30),
+        BackgroundTransparency = 1,
+        LayoutOrder = #Tab.Frame:GetChildren(),
+        Parent = Tab.Frame
+    })
+
+    local ToggleButton = Library:Create("TextButton", {
+        Size = UDim2.new(0, 50, 0, 25),
+        Position = UDim2.new(1, -55, 0.5, -12.5),
+        BackgroundColor3 = Toggle.Value and Colors.PinkMedium or Colors.Primary,
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
         ZIndex = 1002,
-        Parent = button.Parent
+        Parent = ToggleFrame
     })
-    
-    self:Create("UICorner", {
+
+    local ToggleCorner = Library:Create("UICorner", {
         CornerRadius = UDim.new(0, 12),
-        Parent = button.Outer
+        Parent = ToggleButton
     })
+
+    local ToggleLabel = Library:Create("TextLabel", {
+        Size = UDim2.new(1, -60, 1, 0),
+        BackgroundTransparency = 1,
+        Text = Config.Text or "Toggle",
+        TextColor3 = Colors.TextPrimary,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        ZIndex = 1002,
+        Parent = ToggleFrame
+    })
+
+    function Toggle:SetValue(Value)
+        Toggle.Value = Value
+        ToggleButton.BackgroundColor3 = Value and Colors.PinkMedium or Colors.Primary
+        Library:SafeCallback(Toggle.Callback, Value)
+    end
+
+    ToggleButton.MouseButton1Click:Connect(function()
+        Toggle:SetValue(not Toggle.Value)
+    end)
+
+    -- Add hover effects
+    Library:AddHoverEffect(ToggleButton, Colors.HoverPrimary, ToggleButton.BackgroundColor3)
+
+    Toggles[Config.Flag or "Toggle_" .. #Toggles + 1] = Toggle
+    return Toggle
+end
+
+function Library:AddButton(Tab, Config)
+    Config = Config or {}
     
-    self:Create("UIGradient", {
+    local Button = {
+        Type = "Button",
+        Callback = Config.Callback or function() end
+    }
+
+    local ButtonFrame = Library:Create("Frame", {
+        Size = UDim2.new(1, -10, 0, 35),
+        BackgroundTransparency = 1,
+        LayoutOrder = #Tab.Frame:GetChildren(),
+        Parent = Tab.Frame
+    })
+
+    local ButtonElement = Library:Create("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Colors.GetKey,
+        BorderSizePixel = 0,
+        Text = Config.Text or "Button",
+        TextColor3 = Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        AutoButtonColor = false,
+        ZIndex = 1002,
+        Parent = ButtonFrame
+    })
+
+    local ButtonCorner = Library:Create("UICorner", {
+        CornerRadius = UDim.new(0, 8),
+        Parent = ButtonElement
+    })
+
+    local ButtonGradient = Library:Create("UIGradient", {
         Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, self.Colors.PinkDark),
-            ColorSequenceKeypoint.new(1, self.Colors.PinkMedium)
+            ColorSequenceKeypoint.new(0, Colors.PinkMedium),
+            ColorSequenceKeypoint.new(1, Colors.PinkBright)
         },
         Rotation = 90,
-        Parent = button.Outer
+        Parent = ButtonElement
     })
-    
-    button.Label = self:CreateLabel({
-        Size = UDim2.new(1, 0, 1, 0),
-        Text = button.Text,
-        TextColor3 = self.Colors.TextPrimary,
-        TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 1003,
-        Parent = button.Outer
-    })
-    
-    -- Hover effects
-    button.Outer.MouseEnter:Connect(function()
-        TweenService:Create(button.Outer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = self.Colors.HoverPrimary
-        }):Play()
+
+    ButtonElement.MouseButton1Click:Connect(function()
+        Library:SafeCallback(Button.Callback)
     end)
-    
-    button.Outer.MouseLeave:Connect(function()
-        TweenService:Create(button.Outer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = self.Colors.Primary
-        }):Play()
-    end)
-    
-    button.Outer.MouseButton1Click:Connect(function()
-        self:SafeCallback(button.Callback)
-    end)
-    
-    function button:SetText(text)
-        self.Label.Text = text
-    end
-    
-    function button:SetVisible(visible)
-        self.Outer.Visible = visible
-    end
-    
-    return button
+
+    -- Add hover effects
+    Library:AddHoverEffect(ButtonElement, Colors.HoverGetKey, Colors.GetKey)
+
+    Buttons[Config.Flag or "Button_" .. #Buttons + 1] = Button
+    return Button
 end
 
--- Toggle Creation
-function NexusUI:CreateToggle(options)
-    local toggle = {
-        Text = options.Text or "Toggle",
-        Default = options.Default or false,
-        Size = options.Size or UDim2.new(1, 0, 0, 30),
-        Position = options.Position or UDim2.new(0, 0, 0, 0),
-        Parent = options.Parent,
-        Callback = options.Callback or function() end
+function Library:AddSlider(Tab, Config)
+    Config = Config or {}
+    
+    local Slider = {
+        Value = Config.Default or Config.Min or 0,
+        Min = Config.Min or 0,
+        Max = Config.Max or 100,
+        Type = "Slider",
+        Callback = Config.Callback or function() end
     }
-    
-    toggle.Value = toggle.Default
-    
-    toggle.Container = self:Create("Frame", {
-        Size = toggle.Size,
-        Position = toggle.Position,
+
+    local SliderFrame = Library:Create("Frame", {
+        Size = UDim2.new(1, -10, 0, 50),
         BackgroundTransparency = 1,
-        ZIndex = 1001,
-        Parent = toggle.Parent
+        LayoutOrder = #Tab.Frame:GetChildren(),
+        Parent = Tab.Frame
     })
-    
-    toggle.Outer = self:Create("Frame", {
-        Size = UDim2.new(0, 13, 0, 13),
-        BackgroundColor3 = Color3.new(0, 0, 0),
-        BorderColor3 = Color3.new(0, 0, 0),
-        ZIndex = 1002,
-        Parent = toggle.Container
-    })
-    
-    toggle.Inner = self:Create("Frame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = self.Colors.MainColor,
-        BorderColor3 = self.Colors.OutlineColor,
-        BorderMode = Enum.BorderMode.Inset,
-        ZIndex = 1003,
-        Parent = toggle.Outer
-    })
-    
-    toggle.Label = self:CreateLabel({
-        Size = UDim2.new(1, -20, 1, 0),
-        Position = UDim2.new(0, 20, 0, 0),
-        Text = toggle.Text,
+
+    local SliderLabel = Library:Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1,
+        Text = Config.Text or "Slider",
+        TextColor3 = Colors.TextPrimary,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 1003,
-        Parent = toggle.Container
+        Font = Enum.Font.Gotham,
+        ZIndex = 1002,
+        Parent = SliderFrame
     })
-    
-    toggle.Region = self:Create("Frame", {
+
+    local SliderValue = Library:Create("TextLabel", {
+        Size = UDim2.new(0, 60, 0, 20),
+        Position = UDim2.new(1, -60, 0, 0),
+        BackgroundTransparency = 1,
+        Text = tostring(Slider.Value),
+        TextColor3 = Colors.TextSecondary,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Font = Enum.Font.Gotham,
+        ZIndex = 1002,
+        Parent = SliderFrame
+    })
+
+    local SliderTrack = Library:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 15),
+        Position = UDim2.new(0, 0, 1, -20),
+        BackgroundColor3 = Colors.Primary,
+        BorderSizePixel = 0,
+        ZIndex = 1002,
+        Parent = SliderFrame
+    })
+
+    local SliderTrackCorner = Library:Create("UICorner", {
+        CornerRadius = UDim.new(0, 7),
+        Parent = SliderTrack
+    })
+
+    local SliderFill = Library:Create("Frame", {
+        Size = UDim2.new((Slider.Value - Slider.Min) / (Slider.Max - Slider.Min), 0, 1, 0),
+        BackgroundColor3 = Colors.PinkMedium,
+        BorderSizePixel = 0,
+        ZIndex = 1003,
+        Parent = SliderTrack
+    })
+
+    local SliderFillCorner = Library:Create("UICorner", {
+        CornerRadius = UDim.new(0, 7),
+        Parent = SliderFill
+    })
+
+    local SliderButton = Library:Create("TextButton", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
+        Text = "",
         ZIndex = 1004,
-        Parent = toggle.Container
+        Parent = SliderTrack
     })
-    
-    function toggle:UpdateDisplay()
-        if self.Value then
-            self.Inner.BackgroundColor3 = NexusUI.Colors.AccentColor
-            self.Inner.BorderColor3 = NexusUI.Colors.AccentColorDark
-        else
-            self.Inner.BackgroundColor3 = NexusUI.Colors.MainColor
-            self.Inner.BorderColor3 = NexusUI.Colors.OutlineColor
-        end
+
+    function Slider:SetValue(Value)
+        Value = math.clamp(Value, Slider.Min, Slider.Max)
+        Slider.Value = Value
+        SliderValue.Text = tostring(Value)
+        SliderFill.Size = UDim2.new((Value - Slider.Min) / (Slider.Max - Slider.Min), 0, 1, 0)
+        Library:SafeCallback(Slider.Callback, Value)
     end
-    
-    function toggle:SetValue(value)
-        self.Value = value
-        self:UpdateDisplay()
-        NexusUI:SafeCallback(self.Callback, self.Value)
+
+    local function UpdateSliderFromMouse()
+        local mousePos = UserInputService:GetMouseLocation()
+        local trackPos = SliderTrack.AbsolutePosition
+        local trackSize = SliderTrack.AbsoluteSize
+        
+        local relativeX = math.clamp((mousePos.X - trackPos.X) / trackSize.X, 0, 1)
+        local value = math.floor(Slider.Min + (Slider.Max - Slider.Min) * relativeX)
+        
+        Slider:SetValue(value)
     end
-    
-    toggle.Region.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            toggle:SetValue(not toggle.Value)
+
+    SliderButton.MouseButton1Down:Connect(function()
+        UpdateSliderFromMouse()
+        
+        local connection
+        connection = UserInputService.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                UpdateSliderFromMouse()
+            end
+        end)
+        
+        local function onInputEnded(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                connection:Disconnect()
+                UserInputService.InputEnded:Disconnect(onInputEnded)
+            end
         end
+        
+        UserInputService.InputEnded:Connect(onInputEnded)
     end)
+
+    Options[Config.Flag or "Slider_" .. #Options + 1] = Slider
+    return Slider
+end
+
+function Library:AddDropdown(Tab, Config)
+    Config = Config or {}
     
-    toggle:UpdateDisplay()
-    
-    return toggle
-end
-
--- Safe callback function
-function NexusUI:SafeCallback(func, ...)
-    if func and typeof(func) == "function" then
-        local success, result = pcall(func, ...)
-        if not success then
-            warn("NexusUI Callback Error:", result)
-        end
-    end
-end
-
--- Label Creation
-function NexusUI:CreateLabel(options)
-    return self:CreateLabel(options)
-end
-
--- Slider Creation
-function NexusUI:CreateSlider(options)
-    local slider = {
-        Text = options.Text or "Slider",
-        Min = options.Min or 0,
-        Max = options.Max or 100,
-        Default = options.Default or options.Min,
-        Size = options.Size or UDim2.new(1, 0, 0, 60),
-        Position = options.Position or UDim2.new(0, 0, 0, 0),
-        Parent = options.Parent,
-        Callback = options.Callback or function() end
+    local Dropdown = {
+        Value = Config.Default,
+        Values = Config.Values or {},
+        Type = "Dropdown",
+        Callback = Config.Callback or function() end,
+        Open = false
     }
-    
-    slider.Value = slider.Default
-    
-    slider.Container = self:Create("Frame", {
-        Size = slider.Size,
-        Position = slider.Position,
-        BackgroundTransparency = 1,
-        ZIndex = 1001,
-        Parent = slider.Parent
-    })
-    
-    slider.Label = self:CreateLabel({
-        Size = UDim2.new(1, 0, 0, 20),
-        Text = slider.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 1002,
-        Parent = slider.Container
-    })
-    
-    slider.Outer = self:Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 20),
-        Position = UDim2.new(0, 0, 0, 25),
-        BackgroundColor3 = Color3.new(0, 0, 0),
-        BorderColor3 = Color3.new(0, 0, 0),
-        ZIndex = 1002,
-        Parent = slider.Container
-    })
-    
-    slider.Inner = self:Create("Frame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = self.Colors.MainColor,
-        BorderColor3 = self.Colors.OutlineColor,
-        BorderMode = Enum.BorderMode.Inset,
-        ZIndex = 1003,
-        Parent = slider.Outer
-    })
-    
-    slider.Fill = self:Create("Frame", {
-        Size = UDim2.new(0, 0, 1, 0),
-        BackgroundColor3 = self.Colors.AccentColor,
-        BorderColor3 = self.Colors.AccentColorDark,
-        ZIndex = 1004,
-        Parent = slider.Inner
-    })
-    
-    slider.ValueLabel = self:CreateLabel({
-        Size = UDim2.new(1, 0, 1, 0),
-        Text = tostring(slider.Value),
-        TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 1005,
-        Parent = slider.Inner
-    })
-    
-    function slider:UpdateDisplay()
-        local percentage = (self.Value - self.Min) / (self.Max - self.Min)
-        self.Fill.Size = UDim2.new(percentage, 0, 1, 0)
-        self.ValueLabel.Text = tostring(math.floor(self.Value))
-    end
-    
-    function slider:SetValue(value)
-        self.Value = math.clamp(value, self.Min, self.Max)
-        self:UpdateDisplay()
-        NexusUI:SafeCallback(self.Callback, self.Value)
-    end
-    
-    local function updateSlider(input)
-        local absolutePosition = slider.Outer.AbsolutePosition
-        local absoluteSize = slider.Outer.AbsoluteSize
-        local mouseX = math.clamp(input.Position.X, absolutePosition.X, absolutePosition.X + absoluteSize.X)
-        local percentage = (mouseX - absolutePosition.X) / absoluteSize.X
-        local value = slider.Min + (percentage * (slider.Max - slider.Min))
-        slider:SetValue(value)
-    end
-    
-    slider.Outer.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            updateSlider(input)
-            
-            local connection
-            connection = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    connection:Disconnect()
-                else
-                    updateSlider(input)
-                end
-            end)
-        end
-    end)
-    
-    slider:UpdateDisplay()
-    
-    return slider
-end
 
--- Dropdown Creation
-function NexusUI:CreateDropdown(options)
-    local dropdown = {
-        Text = options.Text or "Dropdown",
-        Options = options.Options or {"Option 1", "Option 2", "Option 3"},
-        Default = options.Default or options.Options[1],
-        Size = options.Size or UDim2.new(1, 0, 0, 40),
-        Position = options.Position or UDim2.new(0, 0, 0, 0),
-        Parent = options.Parent,
-        Callback = options.Callback or function() end
-    }
-    
-    dropdown.Value = dropdown.Default
-    dropdown.Open = false
-    
-    dropdown.Container = self:Create("Frame", {
-        Size = dropdown.Size,
-        Position = dropdown.Position,
+    local DropdownFrame = Library:Create("Frame", {
+        Size = UDim2.new(1, -10, 0, 30),
         BackgroundTransparency = 1,
-        ZIndex = 1001,
-        Parent = dropdown.Parent
+        LayoutOrder = #Tab.Frame:GetChildren(),
+        Parent = Tab.Frame
     })
-    
-    dropdown.Outer = self:Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 20),
-        BackgroundColor3 = Color3.new(0, 0, 0),
-        BorderColor3 = Color3.new(0, 0, 0),
-        ZIndex = 1002,
-        Parent = dropdown.Container
-    })
-    
-    dropdown.Inner = self:Create("Frame", {
+
+    local DropdownButton = Library:Create("TextButton", {
         Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = self.Colors.MainColor,
-        BorderColor3 = self.Colors.OutlineColor,
-        BorderMode = Enum.BorderMode.Inset,
-        ZIndex = 1003,
-        Parent = dropdown.Outer
+        BackgroundColor3 = Colors.Primary,
+        BorderSizePixel = 0,
+        Text = Dropdown.Value or Config.Text or "Select...",
+        TextColor3 = Colors.TextPrimary,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        AutoButtonColor = false,
+        ZIndex = 1002,
+        Parent = DropdownFrame
     })
-    
-    dropdown.Label = self:CreateLabel({
-        Size = UDim2.new(1, -20, 1, 0),
-        Position = UDim2.new(0, 5, 0, 0),
-        Text = dropdown.Value,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 1004,
-        Parent = dropdown.Inner
+
+    local DropdownCorner = Library:Create("UICorner", {
+        CornerRadius = UDim.new(0, 8),
+        Parent = DropdownButton
     })
-    
-    dropdown.Arrow = self:Create("ImageLabel", {
-        Size = UDim2.new(0, 12, 0, 12),
-        Position = UDim2.new(1, -17, 0.5, -6),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://6282522798",
-        ZIndex = 1004,
-        Parent = dropdown.Inner
-    })
-    
-    dropdown.ListOuter = self:Create("Frame", {
+
+    local DropdownList = Library:Create("ScrollingFrame", {
         Size = UDim2.new(1, 0, 0, 0),
-        Position = UDim2.new(0, 0, 1, 1),
-        BackgroundColor3 = Color3.new(0, 0, 0),
-        BorderColor3 = Color3.new(0, 0, 0),
+        Position = UDim2.new(0, 0, 1, 5),
+        BackgroundColor3 = Colors.Surface,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Colors.PinkMedium,
         Visible = false,
-        ZIndex = 1010,
-        Parent = dropdown.Outer
+        ZIndex = 1003,
+        Parent = DropdownFrame
     })
-    
-    dropdown.ListInner = self:Create("Frame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = self.Colors.MainColor,
-        BorderColor3 = self.Colors.OutlineColor,
-        BorderMode = Enum.BorderMode.Inset,
-        ZIndex = 1011,
-        Parent = dropdown.ListOuter
-    })
-    
-    local listLayout = self:Create("UIListLayout", {
+
+    local DropdownListLayout = Library:Create("UIListLayout", {
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = dropdown.ListInner
+        Parent = DropdownList
     })
-    
-    function dropdown:UpdateDisplay()
-        dropdown.Label.Text = dropdown.Value
-    end
-    
-    function dropdown:SetValue(value)
-        if table.find(dropdown.Options, value) then
-            dropdown.Value = value
-            dropdown:UpdateDisplay()
-            dropdown:Close()
-            NexusUI:SafeCallback(dropdown.Callback, dropdown.Value)
+
+    function Dropdown:Toggle()
+        Dropdown.Open = not Dropdown.Open
+        DropdownList.Visible = Dropdown.Open
+        
+        if Dropdown.Open then
+            DropdownList.Size = UDim2.new(1, 0, 0, math.min(#Dropdown.Values * 30, 150))
+            Library.OpenedFrames[DropdownList] = true
+        else
+            Library.OpenedFrames[DropdownList] = nil
         end
     end
-    
-    function dropdown:Open()
-        dropdown.Open = true
-        dropdown.Arrow.Rotation = 180
-        dropdown.ListOuter.Visible = true
+
+    function Dropdown:SetValue(Value)
+        Dropdown.Value = Value
+        DropdownButton.Text = Value
+        Library:SafeCallback(Dropdown.Callback, Value)
+        Dropdown:Toggle()
+    end
+
+    function Dropdown:Refresh(NewValues)
+        Dropdown.Values = NewValues or Dropdown.Values
         
         -- Clear existing options
-        for _, child in ipairs(dropdown.ListInner:GetChildren()) do
+        for _, child in ipairs(DropdownList:GetChildren()) do
             if child:IsA("TextButton") then
                 child:Destroy()
             end
         end
         
-        -- Add options
-        for i, option in ipairs(dropdown.Options) do
-            local optionButton = self:Create("TextButton", {
-                Size = UDim2.new(1, 0, 0, 20),
-                BackgroundColor3 = self.Colors.MainColor,
+        -- Add new options
+        for _, value in ipairs(Dropdown.Values) do
+            local OptionButton = Library:Create("TextButton", {
+                Size = UDim2.new(1, 0, 0, 30),
+                BackgroundColor3 = Colors.Primary,
                 BorderSizePixel = 0,
-                Text = "",
+                Text = tostring(value),
+                TextColor3 = Colors.TextPrimary,
+                TextSize = 14,
+                Font = Enum.Font.Gotham,
                 AutoButtonColor = false,
-                ZIndex = 1012,
-                Parent = dropdown.ListInner
+                ZIndex = 1004,
+                Parent = DropdownList
             })
-            
-            local optionLabel = self:CreateLabel({
-                Size = UDim2.new(1, -5, 1, 0),
-                Position = UDim2.new(0, 5, 0, 0),
-                Text = option,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 1013,
-                Parent = optionButton
-            })
-            
-            optionButton.MouseEnter:Connect(function()
-                optionButton.BackgroundColor3 = self.Colors.HoverPrimary
-            end)
-            
-            optionButton.MouseLeave:Connect(function()
-                optionButton.BackgroundColor3 = self.Colors.MainColor
-            end)
-            
-            optionButton.MouseButton1Click:Connect(function()
-                dropdown:SetValue(option)
+
+            Library:AddHoverEffect(OptionButton, Colors.HoverPrimary, Colors.Primary)
+
+            OptionButton.MouseButton1Click:Connect(function()
+                Dropdown:SetValue(value)
             end)
         end
-        
-        dropdown.ListOuter.Size = UDim2.new(1, 0, 0, #dropdown.Options * 20)
     end
-    
-    function dropdown:Close()
-        dropdown.Open = false
-        dropdown.Arrow.Rotation = 0
-        dropdown.ListOuter.Visible = false
-    end
-    
-    function dropdown:Toggle()
-        if dropdown.Open then
-            dropdown:Close()
-        else
-            dropdown:Open()
-        end
-    end
-    
-    dropdown.Outer.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dropdown:Toggle()
+
+    DropdownButton.MouseButton1Click:Connect(function()
+        Dropdown:Toggle()
+    end)
+
+    -- Close dropdown when clicking outside
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and Dropdown.Open then
+            if not Library:MouseIsOverOpenedFrame() then
+                Dropdown:Toggle()
+            end
         end
     end)
-    
-    dropdown:UpdateDisplay()
-    
-    return dropdown
+
+    -- Initialize options
+    Dropdown:Refresh()
+
+    Library:AddHoverEffect(DropdownButton, Colors.HoverPrimary, Colors.Primary)
+
+    Options[Config.Flag or "Dropdown_" .. #Options + 1] = Dropdown
+    return Dropdown
 end
 
--- Initialize
-function NexusUI:Init()
-    -- Any initialization code can go here
-    print("NexusUI Library Loaded!")
+function Library:AddLabel(Tab, Config)
+    Config = Config or {}
+    
+    local Label = {
+        Type = "Label",
+        Text = Config.Text or "Label"
+    }
+
+    local LabelFrame = Library:Create("Frame", {
+        Size = UDim2.new(1, -10, 0, 25),
+        BackgroundTransparency = 1,
+        LayoutOrder = #Tab.Frame:GetChildren(),
+        Parent = Tab.Frame
+    })
+
+    local LabelElement = Library:Create("TextLabel", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = Label.Text,
+        TextColor3 = Colors.TextPrimary,
+        TextSize = 14,
+        TextXAlignment = Config.Center and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        ZIndex = 1002,
+        Parent = LabelFrame
+    })
+
+    function Label:SetText(Text)
+        Label.Text = Text
+        LabelElement.Text = Text
+    end
+
+    Labels[Config.Flag or "Label_" .. #Labels + 1] = Label
+    return Label
 end
 
--- Return the library
-return NexusUI
+-- ========================================
+-- HELPER FUNCTIONS
+-- ========================================
+function Library:AddHoverEffect(Element, HoverColor, NormalColor)
+    Element.MouseEnter:Connect(function()
+        TweenService:Create(Element, TweenInfo.new(0.2), {
+            BackgroundColor3 = HoverColor
+        }):Play()
+    end)
+
+    Element.MouseLeave:Connect(function()
+        TweenService:Create(Element, TweenInfo.new(0.2), {
+            BackgroundColor3 = NormalColor
+        }):Play()
+    end)
+end
+
+function Library:Notify(Title, Message, Duration)
+    Duration = Duration or 5
+    
+    local NotifyFrame = Library:Create("Frame", {
+        Size = UDim2.new(0, 300, 0, 80),
+        Position = UDim2.new(1, -320, 0, 20),
+        BackgroundColor3 = Colors.Surface,
+        BorderSizePixel = 0,
+        ZIndex = 2000,
+        Parent = ScreenGui
+    })
+
+    local NotifyCorner = Library:Create("UICorner", {
+        CornerRadius = UDim.new(0, 12),
+        Parent = NotifyFrame
+    })
+
+    local NotifyStroke = Library:Create("UIStroke", {
+        Color = Colors.PinkMedium,
+        Thickness = 2,
+        Parent = NotifyFrame
+    })
+
+    local TitleLabel = Library:Create("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 25),
+        Position = UDim2.new(0, 10, 0, 10),
+        BackgroundTransparency = 1,
+        Text = Title or "Notification",
+        TextColor3 = Colors.TextPrimary,
+        TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 2001,
+        Parent = NotifyFrame
+    })
+
+    local MessageLabel = Library:Create("TextLabel", {
+        Size = UDim2.new(1, -20, 1, -45),
+        Position = UDim2.new(0, 10, 0, 35),
+        BackgroundTransparency = 1,
+        Text = Message or "",
+        TextColor3 = Colors.TextSecondary,
+        TextSize = 14,
+        TextWrapped = true,
+        Font = Enum.Font.Gotham,
+        ZIndex = 2001,
+        Parent = NotifyFrame
+    })
+
+    -- Animate in
+    NotifyFrame.Position = UDim2.new(1, 300, 0, 20)
+    TweenService:Create(NotifyFrame, TweenInfo.new(0.3), {
+        Position = UDim2.new(1, -320, 0, 20)
+    }):Play()
+
+    -- Auto remove after duration
+    task.delay(Duration, function()
+        TweenService:Create(NotifyFrame, TweenInfo.new(0.3), {
+            Position = UDim2.new(1, 300, 0, 20)
+        }):Play()
+        task.wait(0.3)
+        NotifyFrame:Destroy()
+    end)
+end
+
+-- ========================================
+-- INITIALIZATION AND EXPORTS
+-- ========================================
+function Library:Unload()
+    ParticleState.IsDestroyed = true
+    for _, signal in ipairs(Library.Signals) do
+        signal:Disconnect()
+    end
+    ScreenGui:Destroy()
+end
+
+-- Make library globally available
+getgenv().NexusUI = Library
+
+return Library
