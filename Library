@@ -1581,5 +1581,10 @@ function Nexus:Init()
     return self
 end
 
--- Initialize the library
-return Nexus:Init()
+-- Initialize the library immediately
+Nexus:Init()
+
+-- Make CreateWindow available globally
+getgenv().Nexus = Nexus
+
+return Nexus
