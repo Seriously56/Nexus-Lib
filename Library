@@ -703,18 +703,24 @@ function Nexus:CreateTab(options, tabsParent, contentParent)
     
     function tab:Select()
         -- Hide all other tabs
-        for _, otherTab in ipairs(tabsParent.Parent.Tabs) do
-            if otherTab ~= self then
-                Nexus.Utils.Tween(otherTab.Button, {
-                    BackgroundColor3 = self.Colors.Current.Primary
+        for _, otherTab in ipairs(tabsParent:GetChildren()) do
+            if otherTab:IsA("TextButton") and otherTab ~= self.Button then
+                Nexus.Utils.Tween(otherTab, {
+                    BackgroundColor3 = Nexus.Colors.Current.Primary
                 })
-                otherTab.Content.Visible = false
+            end
+        end
+        
+        -- Hide all tab contents
+        for _, content in ipairs(contentParent:GetChildren()) do
+            if content:IsA("ScrollingFrame") then
+                content.Visible = false
             end
         end
         
         -- Show this tab
         Nexus.Utils.Tween(self.Button, {
-            BackgroundColor3 = self.Colors.Current.PinkMedium
+            BackgroundColor3 = Nexus.Colors.Current.PinkMedium
         })
         
         self.Content.Visible = true
