@@ -463,10 +463,10 @@ function NexusUI:CreateWindow(config)
         -- Create tab button
         local TabButton = Instance.new("TextButton")
         TabButton.Size = UDim2.new(0, 100, 0, 30)
-        TabButton.BackgroundColor3 = self.Colors.Primary
+        TabButton.BackgroundColor3 = NexusUI.Colors.Primary
         TabButton.BorderSizePixel = 0
         TabButton.Text = tabName
-        TabButton.TextColor3 = self.Colors.TextPrimary
+        TabButton.TextColor3 = NexusUI.Colors.TextPrimary
         TabButton.TextSize = 14
         TabButton.Font = Enum.Font.GothamMedium
         TabButton.AutoButtonColor = false
@@ -479,8 +479,8 @@ function NexusUI:CreateWindow(config)
 
         local TabGradient = Instance.new("UIGradient")
         TabGradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, self.Colors.PinkDark),
-            ColorSequenceKeypoint.new(1, self.Colors.PinkMedium)
+            ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkDark),
+            ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkMedium)
         }
         TabGradient.Rotation = 90
         TabGradient.Parent = TabButton
@@ -505,22 +505,22 @@ function NexusUI:CreateWindow(config)
         TabButton.MouseButton1Click:Connect(function()
             for _, otherTab in pairs(self.Tabs) do
                 otherTab.Page.Visible = false
-                otherTab.Button.BackgroundColor3 = self.Colors.Primary
+                otherTab.Button.BackgroundColor3 = NexusUI.Colors.Primary
             end
             TabPage.Visible = true
-            TabButton.BackgroundColor3 = self.Colors.PinkMedium
+            TabButton.BackgroundColor3 = NexusUI.Colors.PinkMedium
         end)
 
         -- Hover effects
-        NexusUI:SetupButtonHover(TabButton, self.Colors.HoverPrimary, self.Colors.Primary)
+        NexusUI:SetupButtonHover(TabButton, NexusUI.Colors.HoverPrimary, NexusUI.Colors.Primary)
 
         -- Add to window tabs
         self.Tabs[tabName] = tab
 
         -- Select first tab
-        if #self.Tabs == 1 then
+        if next(self.Tabs) == tab then
             TabPage.Visible = true
-            TabButton.BackgroundColor3 = self.Colors.PinkMedium
+            TabButton.BackgroundColor3 = NexusUI.Colors.PinkMedium
         end
 
         function tab:AddButton(buttonConfig)
@@ -719,7 +719,7 @@ function NexusUI:CreateWindow(config)
                 value = math.clamp(value, slider.Min, slider.Max)
                 slider.Default = value
                 SliderInner.Size = UDim2.new((value - slider.Min) / (slider.Max - slider.Min), 0, 1, 0)
-                SliderValue.Text = tostring(value)
+                SliderValue.Text = tostring(math.floor(value))
                 if slider.Callback then
                     slider.Callback(value)
                 end
@@ -762,7 +762,7 @@ function NexusUI:CreateWindow(config)
 
     function window:Destroy()
         ScreenGui:Destroy()
-        self.ParticleState.IsDestroyed = true
+        NexusUI.ParticleState.IsDestroyed = true
     end
 
     return window
