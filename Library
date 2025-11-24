@@ -46,42 +46,6 @@ Nexus.Colors.Palettes = {
         PinkDark = Color3.fromRGB(255, 20, 147),
         PinkBright = Color3.fromRGB(255, 130, 190),
         PinkNeon = Color3.fromRGB(255, 60, 160)
-    },
-    
-    Dark = {
-        Background = Color3.fromRGB(20, 20, 20),
-        Surface = Color3.fromRGB(30, 30, 30),
-        Primary = Color3.fromRGB(45, 45, 45),
-        Secondary = Color3.fromRGB(60, 60, 60),
-        Border = Color3.fromRGB(80, 80, 80),
-        TextPrimary = Color3.fromRGB(255, 255, 255),
-        TextSecondary = Color3.fromRGB(200, 200, 200),
-        Success = Color3.fromRGB(76, 175, 80),
-        Error = Color3.fromRGB(244, 67, 54),
-        Warning = Color3.fromRGB(255, 152, 0),
-        Discord = Color3.fromRGB(114, 137, 218),
-        GetKey = Color3.fromRGB(0, 150, 255),
-        HoverPrimary = Color3.fromRGB(65, 65, 65),
-        HoverGetKey = Color3.fromRGB(30, 170, 255),
-        HoverDiscord = Color3.fromRGB(134, 157, 238)
-    },
-    
-    Ocean = {
-        Background = Color3.fromRGB(10, 15, 25),
-        Surface = Color3.fromRGB(20, 30, 45),
-        Primary = Color3.fromRGB(30, 50, 70),
-        Secondary = Color3.fromRGB(40, 70, 100),
-        Border = Color3.fromRGB(60, 100, 140),
-        TextPrimary = Color3.fromRGB(240, 248, 255),
-        TextSecondary = Color3.fromRGB(180, 200, 220),
-        Success = Color3.fromRGB(100, 255, 200),
-        Error = Color3.fromRGB(255, 100, 150),
-        Warning = Color3.fromRGB(255, 220, 100),
-        Discord = Color3.fromRGB(65, 105, 225),
-        GetKey = Color3.fromRGB(0, 200, 255),
-        HoverPrimary = Color3.fromRGB(50, 80, 110),
-        HoverGetKey = Color3.fromRGB(30, 220, 255),
-        HoverDiscord = Color3.fromRGB(85, 125, 245)
     }
 }
 
@@ -122,12 +86,7 @@ Nexus.Utils.Tween = function(object, properties, duration, easingStyle, easingDi
     return tween
 end
 
-Nexus.Utils.Round = function(num, decimalPlaces)
-    local multiplier = 10^(decimalPlaces or 0)
-    return math.floor(num * multiplier + 0.5) / multiplier
-end
-
-Nexus.Utils.CreateGradient = function(colors, transparency)
+Nexus.Utils.CreateGradient = function(colors)
     local sequence = {}
     for i, color in ipairs(colors) do
         table.insert(sequence, ColorSequenceKeypoint.new((i-1)/(#colors-1), color))
@@ -142,12 +101,10 @@ Nexus.Config = {
     Defaults = {
         EnableParticles = true,
         EnableAnimations = true,
-        EnableSounds = false,
         Theme = "MaxMoney",
         Transparency = 0,
         CornerRadius = 8,
-        BorderThickness = 1,
-        AnimationSpeed = 0.3
+        BorderThickness = 1
     },
     Current = {}
 }
@@ -157,16 +114,8 @@ function Nexus:LoadConfig(configTable)
     self:SetTheme(self.Config.Current.Theme)
 end
 
-function Nexus:SaveConfig()
-    return self.Config.Current
-end
-
 function Nexus:GetConfig(key)
     return self.Config.Current[key] or self.Config.Defaults[key]
-end
-
-function Nexus:SetConfig(key, value)
-    self.Config.Current[key] = value
 end
 
 -- ========================================
@@ -243,30 +192,6 @@ function Nexus.Particles:CreateSystem(container, config)
             Parent = particle
         })
         
-        local highlight = Nexus.Utils.Create("Frame", {
-            Size = UDim2.new(0.3, 0, 0.3, 0),
-            Position = UDim2.new(0.2, 0, 0.15, 0),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.3,
-            BorderSizePixel = 0,
-            ZIndex = particle.ZIndex + 1,
-            Parent = particle
-        })
-        
-        Nexus.Utils.Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = highlight})
-        
-        local glow = Nexus.Utils.Create("Frame", {
-            Size = UDim2.new(1.8, 0, 1.8, 0),
-            Position = UDim2.new(-0.4, 0, -0.4, 0),
-            BackgroundColor3 = system.Config.Colors[1],
-            BackgroundTransparency = 0.9,
-            BorderSizePixel = 0,
-            ZIndex = particle.ZIndex - 1,
-            Parent = particle
-        })
-        
-        Nexus.Utils.Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = glow})
-        
         local particleData = {
             frame = particle,
             vx = (math.random() - 0.5) * system.Config.ParticleSpeed,
@@ -275,10 +200,7 @@ function Nexus.Particles:CreateSystem(container, config)
             rotation = 0,
             rotationSpeed = (math.random() - 0.5) * 2,
             pulsePhase = math.random() * math.pi * 2,
-            driftPhase = math.random() * math.pi * 2,
             originalTransparency = particle.BackgroundTransparency,
-            glow = glow,
-            highlight = highlight,
             lifetime = math.random(system.Config.ParticleLifetimeMin, system.Config.ParticleLifetimeMax),
             originalSize = size,
             wobblePhase = math.random() * math.pi * 2,
@@ -346,9 +268,6 @@ function Nexus.Particles:CreateSystem(container, config)
                     newX = newX + math.sin(wobbleTime) * 0.001
                     newY = newY + math.cos(wobbleTime * 0.7) * 0.001
                     
-                    newX = newX + (math.random() - 0.5) * 0.0004
-                    newY = newY + (math.random() - 0.5) * 0.0003
-                    
                     p.rotation = p.rotation + p.rotationSpeed
                     p.frame.Rotation = p.rotation
                     
@@ -359,15 +278,6 @@ function Nexus.Particles:CreateSystem(container, config)
                     local transparencyPulse = math.sin(tick() * 3 + p.pulsePhase) * 0.1
                     local newTransparency = math.max(0.5, math.min(0.95, p.originalTransparency + transparencyPulse))
                     p.frame.BackgroundTransparency = newTransparency
-                    
-                    local glowIntensity = 0.9
-                    if distanceToMouse < 0.2 then
-                        glowIntensity = 0.7 + (distanceToMouse / 0.2) * 0.2
-                    end
-                    p.glow.BackgroundTransparency = glowIntensity
-                    
-                    local shimmer = math.sin(tick() * 4 + p.pulsePhase) * 0.2 + 0.3
-                    p.highlight.BackgroundTransparency = shimmer
                     
                     p.vx = p.vx * 0.995
                     p.vy = p.vy * 0.998
@@ -417,42 +327,9 @@ function Nexus.Particles:CreateSystem(container, config)
         end)
     end
     
-    function system:Destroy()
-        self.IsDestroyed = true
-        for _, particle in ipairs(self.Particles) do
-            if particle.frame then
-                particle.frame:Destroy()
-            end
-        end
-        self.Particles = {}
-    end
-    
-    function system:SetEnabled(enabled)
-        if not enabled then
-            for _, particle in ipairs(self.Particles) do
-                if particle.frame then
-                    particle.frame.Visible = false
-                end
-            end
-        else
-            for _, particle in ipairs(self.Particles) do
-                if particle.frame then
-                    particle.frame.Visible = true
-                end
-            end
-        end
-    end
-    
     StartSystem()
     table.insert(Nexus.Particles.Systems, system)
     return system
-end
-
-function Nexus.Particles:SetGlobalEnabled(enabled)
-    self.Enabled = enabled
-    for _, system in ipairs(self.Systems) do
-        system:SetEnabled(enabled)
-    end
 end
 
 -- ========================================
@@ -462,14 +339,13 @@ function Nexus:CreateWindow(options)
     local options = options or {}
     local window = {
         Name = options.Name or "NexusWindow",
-        Size = options.Size or UDim2.new(0, 400, 0, 500),
-        Position = options.Position or UDim2.new(0.5, -200, 0.5, -250),
+        Size = options.Size or UDim2.new(0, 450, 0, 500),
+        Position = options.Position or UDim2.new(0.5, -225, 0.5, -250),
         Title = options.Title or "Nexus UI",
         Subtitle = options.Subtitle or "",
         EnableParticles = options.EnableParticles ~= false,
         EnableDragging = options.EnableDragging ~= false,
         ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift,
-        Sections = {},
         Tabs = {},
         CurrentTab = nil
     }
@@ -641,7 +517,7 @@ function Nexus:CreateWindow(options)
     -- Reopen Button
     window.ReopenButton = Nexus.Utils.Create("ImageButton", {
         Name = "ReopenButton",
-        Size = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(0, 60, 0, 60),
         Position = UDim2.new(0, 20, 0, 20),
         BackgroundColor3 = self.Colors.Current.Primary,
         BorderSizePixel = 0,
@@ -711,13 +587,10 @@ function Nexus:CreateWindow(options)
     
     function window:Destroy()
         self.ScreenGui:Destroy()
-        if self.ParticleSystem then
-            self.ParticleSystem:Destroy()
-        end
     end
     
     function window:AddTab(options)
-        local tab = self:CreateTab(options, self.TabsContainer, self.Content)
+        local tab = Nexus:CreateTab(options, self.TabsContainer, self.Content)
         table.insert(self.Tabs, tab)
         
         if #self.Tabs == 1 then
@@ -726,13 +599,6 @@ function Nexus:CreateWindow(options)
         end
         
         return tab
-    end
-    
-    function window:AddSection(options)
-        if not self.CurrentTab then
-            error("No tab selected. Add a tab first or create sections within a tab.")
-        end
-        return self.CurrentTab:AddSection(options)
     end
     
     -- Start animations
@@ -787,8 +653,7 @@ function Nexus:CreateTab(options, tabsParent, contentParent)
     local tab = {
         Name = options.Name or "Tab",
         Text = options.Text or "Tab",
-        Sections = {},
-        ContentVisible = false
+        Sections = {}
     }
     
     tab.Button = Nexus.Utils.Create("TextButton", {
@@ -826,24 +691,24 @@ function Nexus:CreateTab(options, tabsParent, contentParent)
         Parent = tab.Content
     })
     
+    tab.ContentPadding = Nexus.Utils.Create("UIPadding", {
+        PaddingTop = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 5),
+        Parent = tab.Content
+    })
+    
     tab.ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        tab.Content.CanvasSize = UDim2.new(0, 0, 0, tab.ContentLayout.AbsoluteContentSize.Y)
+        tab.Content.CanvasSize = UDim2.new(0, 0, 0, tab.ContentLayout.AbsoluteContentSize.Y + 10)
     end)
     
     function tab:Select()
         -- Hide all other tabs
-        for _, otherTab in ipairs(tabsParent:GetChildren()) do
-            if otherTab:IsA("TextButton") then
-                Nexus.Utils.Tween(otherTab, {
+        for _, otherTab in ipairs(tabsParent.Parent.Tabs) do
+            if otherTab ~= self then
+                Nexus.Utils.Tween(otherTab.Button, {
                     BackgroundColor3 = self.Colors.Current.Primary
                 })
-            end
-        end
-        
-        -- Hide all tab contents
-        for _, content in ipairs(contentParent:GetChildren()) do
-            if content:IsA("ScrollingFrame") then
-                content.Visible = false
+                otherTab.Content.Visible = false
             end
         end
         
@@ -853,7 +718,6 @@ function Nexus:CreateTab(options, tabsParent, contentParent)
         })
         
         self.Content.Visible = true
-        self.ContentVisible = true
     end
     
     function tab:AddSection(options)
@@ -904,8 +768,8 @@ function Nexus:CreateSection(options, parent)
     
     -- Elements Container
     section.ElementsContainer = Nexus.Utils.Create("Frame", {
-        Size = UDim2.new(1, 0, 1, -40),
-        Position = UDim2.new(0, 0, 0, 40),
+        Size = UDim2.new(1, 0, 1, -35),
+        Position = UDim2.new(0, 0, 0, 35),
         BackgroundTransparency = 1,
         Parent = section.Container
     })
@@ -917,35 +781,51 @@ function Nexus:CreateSection(options, parent)
     })
     
     function section:AddButton(options)
-        return Nexus:CreateButton(options, self.ElementsContainer)
+        local button = Nexus:CreateButton(options, self.ElementsContainer)
+        table.insert(self.Elements, button)
+        return button
     end
     
     function section:AddToggle(options)
-        return Nexus:CreateToggle(options, self.ElementsContainer)
+        local toggle = Nexus:CreateToggle(options, self.ElementsContainer)
+        table.insert(self.Elements, toggle)
+        return toggle
     end
     
     function section:AddSlider(options)
-        return Nexus:CreateSlider(options, self.ElementsContainer)
+        local slider = Nexus:CreateSlider(options, self.ElementsContainer)
+        table.insert(self.Elements, slider)
+        return slider
     end
     
     function section:AddDropdown(options)
-        return Nexus:CreateDropdown(options, self.ElementsContainer)
+        local dropdown = Nexus:CreateDropdown(options, self.ElementsContainer)
+        table.insert(self.Elements, dropdown)
+        return dropdown
     end
     
     function section:AddLabel(options)
-        return Nexus:CreateLabel(options, self.ElementsContainer)
+        local label = Nexus:CreateLabel(options, self.ElementsContainer)
+        table.insert(self.Elements, label)
+        return label
     end
     
     function section:AddTextInput(options)
-        return Nexus:CreateTextInput(options, self.ElementsContainer)
+        local input = Nexus:CreateTextInput(options, self.ElementsContainer)
+        table.insert(self.Elements, input)
+        return input
     end
     
     function section:AddKeybind(options)
-        return Nexus:CreateKeybind(options, self.ElementsContainer)
+        local keybind = Nexus:CreateKeybind(options, self.ElementsContainer)
+        table.insert(self.Elements, keybind)
+        return keybind
     end
     
     function section:AddSeparator()
-        return Nexus:CreateSeparator(self.ElementsContainer)
+        local separator = Nexus:CreateSeparator(self.ElementsContainer)
+        table.insert(self.Elements, separator)
+        return separator
     end
     
     return section
@@ -1362,16 +1242,6 @@ function Nexus:CreateDropdown(options, parent)
         end
     end
     
-    function dropdown:SetOptions(newOptions)
-        self.Options = newOptions
-        for i, v in ipairs(self.OptionsFrame:GetChildren()) do
-            if v:IsA("TextButton") then
-                v:Destroy()
-            end
-        end
-        updateOptions()
-    end
-    
     dropdown.MainButton.MouseButton1Click:Connect(function()
         dropdown:Toggle()
     end)
@@ -1548,11 +1418,6 @@ function Nexus:CreateKeybind(options, parent)
         end)
     end)
     
-    function keybind:SetKey(keyCode)
-        self.Value = keyCode
-        self.KeyButton.Text = keyCode.Name
-    end
-    
     return keybind
 end
 
@@ -1581,10 +1446,7 @@ function Nexus:Init()
     return self
 end
 
--- Initialize the library immediately
+-- Initialize the library
 Nexus:Init()
-
--- Make CreateWindow available globally
-getgenv().Nexus = Nexus
 
 return Nexus
