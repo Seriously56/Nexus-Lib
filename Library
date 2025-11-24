@@ -870,7 +870,6 @@ local function GetPlayers(ExcludeLocalPlayer, ReturnInstances)
 
     if ExcludeLocalPlayer then
         local Idx = table.find(PlayerList, LocalPlayer);
-
         if Idx then
             table.remove(PlayerList, Idx);
         end
