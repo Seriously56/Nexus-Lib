@@ -64,7 +64,7 @@ function NexusUI:UpdateGuiBounds(container)
     local absolutePosition = container.AbsolutePosition
     local absoluteSize = container.AbsoluteSize
     
-    self.ParticleState.GuiBounds = {
+    NexusUI.ParticleState.GuiBounds = {
         MinX = absolutePosition.X,
         MaxX = absolutePosition.X + absoluteSize.X,
         MinY = absolutePosition.Y,
@@ -73,7 +73,7 @@ function NexusUI:UpdateGuiBounds(container)
 end
 
 function NexusUI:CreateParticle(container)
-    if not container or not container.Parent or self.ParticleState.IsDestroyed then
+    if not container or not container.Parent or NexusUI.ParticleState.IsDestroyed then
         return nil
     end
     
@@ -85,7 +85,7 @@ function NexusUI:CreateParticle(container)
     local startY = math.random(0, 100) / 100
     particle.Position = UDim2.new(startX, 0, startY, 0)
     
-    particle.BackgroundColor3 = self.Colors.PinkLight
+    particle.BackgroundColor3 = NexusUI.Colors.PinkLight
     particle.BackgroundTransparency = math.random(60, 85) / 100
     particle.BorderSizePixel = 0
     particle.ZIndex = 5
@@ -98,9 +98,9 @@ function NexusUI:CreateParticle(container)
     
     local gradient = Instance.new('UIGradient')
     local bubbleColors = {
-        self.Colors.PinkLight,
-        self.Colors.PinkMedium,
-        self.Colors.PinkDark,
+        NexusUI.Colors.PinkLight,
+        NexusUI.Colors.PinkMedium,
+        NexusUI.Colors.PinkDark,
         Color3.fromRGB(255, 150, 200)
     }
     local color1 = bubbleColors[math.random(#bubbleColors)]
@@ -131,7 +131,7 @@ function NexusUI:CreateParticle(container)
     local glow = Instance.new('Frame')
     glow.Size = UDim2.new(1.8, 0, 1.8, 0)
     glow.Position = UDim2.new(-0.4, 0, -0.4, 0)
-    glow.BackgroundColor3 = self.Colors.PinkLight
+    glow.BackgroundColor3 = NexusUI.Colors.PinkLight
     glow.BackgroundTransparency = 0.9
     glow.BorderSizePixel = 0
     glow.ZIndex = particle.ZIndex - 1
@@ -159,31 +159,31 @@ function NexusUI:CreateParticle(container)
         mass = size / 10
     }
     
-    table.insert(self.ParticleState.Particles, particleData)
+    table.insert(NexusUI.ParticleState.Particles, particleData)
     return particle
 end
 
 function NexusUI:UpdateParticles(container)
-    if self.ParticleState.IsDestroyed or not container then return end
+    if NexusUI.ParticleState.IsDestroyed or not container then return end
     
-    self:UpdateGuiBounds(container)
+    NexusUI:UpdateGuiBounds(container)
     
     local screenSize = container.AbsoluteSize
-    local mouseScreenX = (self.ParticleState.MousePosition.X - self.ParticleState.GuiBounds.MinX) / screenSize.X
-    local mouseScreenY = (self.ParticleState.MousePosition.Y - self.ParticleState.GuiBounds.MinY) / screenSize.Y
+    local mouseScreenX = (NexusUI.ParticleState.MousePosition.X - NexusUI.ParticleState.GuiBounds.MinX) / screenSize.X
+    local mouseScreenY = (NexusUI.ParticleState.MousePosition.Y - NexusUI.ParticleState.GuiBounds.MinY) / screenSize.Y
     
-    for i = #self.ParticleState.Particles, 1, -1 do
-        local p = self.ParticleState.Particles[i]
+    for i = #NexusUI.ParticleState.Particles, 1, -1 do
+        local p = NexusUI.ParticleState.Particles[i]
         
         if not p or not p.frame or not p.frame.Parent then
-            table.remove(self.ParticleState.Particles, i)
+            table.remove(NexusUI.ParticleState.Particles, i)
         else
             local currentPos = p.frame.Position
             local age = tick() - p.created
             
             if age > p.lifetime then
                 p.frame:Destroy()
-                table.remove(self.ParticleState.Particles, i)
+                table.remove(NexusUI.ParticleState.Particles, i)
             else
                 local distanceToMouse = math.sqrt(
                     (currentPos.X.Scale - mouseScreenX)^2 + 
@@ -254,28 +254,28 @@ function NexusUI:UpdateParticles(container)
 end
 
 function NexusUI:StartParticleSystem(container)
-    self:UpdateGuiBounds(container)
+    NexusUI:UpdateGuiBounds(container)
     
     UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             local mousePos = input.Position
-            if mousePos.X >= self.ParticleState.GuiBounds.MinX and mousePos.X <= self.ParticleState.GuiBounds.MaxX and
-               mousePos.Y >= self.ParticleState.GuiBounds.MinY and mousePos.Y <= self.ParticleState.GuiBounds.MaxY then
-                self.ParticleState.MousePosition.X = mousePos.X
-                self.ParticleState.MousePosition.Y = mousePos.Y
+            if mousePos.X >= NexusUI.ParticleState.GuiBounds.MinX and mousePos.X <= NexusUI.ParticleState.GuiBounds.MaxX and
+               mousePos.Y >= NexusUI.ParticleState.GuiBounds.MinY and mousePos.Y <= NexusUI.ParticleState.GuiBounds.MaxY then
+                NexusUI.ParticleState.MousePosition.X = mousePos.X
+                NexusUI.ParticleState.MousePosition.Y = mousePos.Y
             end
         end
     end)
     
     task.spawn(function()
         for i = 1, 20 do
-            if self.ParticleState.IsDestroyed then break end
+            if NexusUI.ParticleState.IsDestroyed then break end
             NexusUIParticle(container)
             task.wait(math.random(20, 100) / 1000)
         end
         
-        while not self.ParticleState.IsDestroyed and container.Parent do
-            if #self.ParticleState.Particles < 40 then
+        while not NexusUI.ParticleState.IsDestroyed and container.Parent do
+            if #NexusUI.ParticleState.Particles < 40 then
                 NexusUIParticle(container)
             end
             task.wait(math.random(400, 1200) / 1000)
@@ -283,8 +283,8 @@ function NexusUI:StartParticleSystem(container)
     end)
     
     task.spawn(function()
-        while not self.ParticleState.IsDestroyed and container.Parent do
-            pcall(function() self:UpdateParticles(container) end)
+        while not NexusUI.ParticleState.IsDestroyed and container.Parent do
+            pcall(function() NexusUI:UpdateParticles(container) end)
             task.wait(1/60)
         end
     end)
@@ -309,7 +309,7 @@ function NexusUI:CreateLabel(properties)
     local label = NexusUI('TextLabel', {
         BackgroundTransparency = 1,
         Font = Enum.Font.Gotham,
-        TextColor3 = self.Colors.TextPrimary,
+        TextColor3 = NexusUI.Colors.TextPrimary,
         TextSize = 14,
         TextStrokeTransparency = 0,
     })
@@ -384,7 +384,7 @@ function NexusUI:CreateWindow(config)
         Name = "MainContainer",
         Size = config.Size or UDim2.new(0, 550, 0, 400),
         Position = config.Position or UDim2.new(0.5, -275, 0.5, -200),
-        BackgroundColor3 = self.Colors.Surface,
+        BackgroundColor3 = NexusUI.Colors.Surface,
         BackgroundTransparency = 0,
         BorderSizePixel = 0,
         ZIndex = 1000,
@@ -397,7 +397,7 @@ function NexusUI:CreateWindow(config)
     })
     
     local stroke = NexusUI("UIStroke", {
-        Color = self.Colors.PinkMedium,
+        Color = NexusUI.Colors.PinkMedium,
         Thickness = 2,
         Transparency = 0.2,
         Parent = mainContainer
@@ -427,7 +427,7 @@ function NexusUI:CreateWindow(config)
     })
     
     local borderStroke = NexusUI("UIStroke", {
-        Color = self.Colors.PinkLight,
+        Color = NexusUI.Colors.PinkLight,
         Thickness = 3,
         Transparency = 0.3,
         Parent = animatedBorder
@@ -435,10 +435,10 @@ function NexusUI:CreateWindow(config)
     
     local borderGradient = NexusUI("UIGradient", {
         Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, self.Colors.PinkLight),
-            ColorSequenceKeypoint.new(0.3, self.Colors.PinkMedium),
-            ColorSequenceKeypoint.new(0.7, self.Colors.PinkDark),
-            ColorSequenceKeypoint.new(1, self.Colors.PinkLight)
+            ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkLight),
+            ColorSequenceKeypoint.new(0.3, NexusUI.Colors.PinkMedium),
+            ColorSequenceKeypoint.new(0.7, NexusUI.Colors.PinkDark),
+            ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkLight)
         },
         Transparency = NumberSequence.new{
             NumberSequenceKeypoint.new(0, 0.8),
@@ -470,18 +470,18 @@ function NexusUI:CreateWindow(config)
         Text = config.Title or "NEXUS UI",
         TextScaled = true,
         Font = Enum.Font.GothamBlack,
-        TextColor3 = self.Colors.TextPrimary,
+        TextColor3 = NexusUI.Colors.TextPrimary,
         TextStrokeTransparency = 0.7,
-        TextStrokeColor3 = self.Colors.PinkDark,
+        TextStrokeColor3 = NexusUI.Colors.PinkDark,
         ZIndex = 1002,
         Parent = header
     })
     
     local titleGradient = NexusUI("UIGradient", {
         Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, self.Colors.PinkLight),
-            ColorSequenceKeypoint.new(0.5, self.Colors.PinkMedium),
-            ColorSequenceKeypoint.new(1, self.Colors.PinkDark)
+            ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkLight),
+            ColorSequenceKeypoint.new(0.5, NexusUI.Colors.PinkMedium),
+            ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkDark)
         },
         Rotation = 45,
         Parent = titleLabel
@@ -516,7 +516,7 @@ function NexusUI:CreateWindow(config)
         Size = UDim2.new(0.5, -5, 1, 0),
         BackgroundTransparency = 1,
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = self.Colors.PinkMedium,
+        ScrollBarImageColor3 = NexusUI.Colors.PinkMedium,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         ZIndex = 1001,
         Parent = contentFrame
@@ -534,7 +534,7 @@ function NexusUI:CreateWindow(config)
         Position = UDim2.new(0.5, 5, 0, 0),
         BackgroundTransparency = 1,
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = self.Colors.PinkMedium,
+        ScrollBarImageColor3 = NexusUI.Colors.PinkMedium,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         ZIndex = 1001,
         Parent = contentFrame
@@ -547,10 +547,10 @@ function NexusUI:CreateWindow(config)
     })
     
     -- Make draggable
-    self:MakeDraggable(mainContainer, header)
+    NexusUI:MakeDraggable(mainContainer, header)
     
     -- Start particle system
-    self:StartParticleSystem(particleContainer)
+    NexusUI:StartParticleSystem(particleContainer)
     
     -- Update scrolling frame sizes
     leftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -635,11 +635,11 @@ function window:AddTab(tabName)
 end
     
     function window:AddLeftGroupbox(title)
-        return self:AddGroupbox(title, leftSide)
+        return NexusUI:AddGroupbox(title, leftSide)
     end
     
     function window:AddRightGroupbox(title)
-        return self:AddGroupbox(title, rightSide)
+        return NexusUI:AddGroupbox(title, rightSide)
     end
     
     function window:AddGroupbox(title, parent)
@@ -651,7 +651,7 @@ end
         
         local groupboxFrame = NexusUI("Frame", {
             Size = UDim2.new(1, 0, 0, 100),
-            BackgroundColor3 = self.Colors.Primary,
+            BackgroundColor3 = NexusUI.Colors.Primary,
             BorderSizePixel = 0,
             ZIndex = 1002,
             Parent = parent
@@ -663,7 +663,7 @@ end
         })
         
         local stroke = NexusUI("UIStroke", {
-            Color = self.Colors.Border,
+            Color = NexusUI.Colors.Border,
             Thickness = 1,
             Parent = groupboxFrame
         })
@@ -672,7 +672,7 @@ end
             Size = UDim2.new(1, -20, 0, 25),
             Position = UDim2.new(0, 10, 0, 5),
             Text = title,
-            TextColor3 = self.Colors.TextPrimary,
+            TextColor3 = NexusUI.Colors.TextPrimary,
             TextSize = 14,
             Font = Enum.Font.GothamBold,
             ZIndex = 1003,
@@ -714,7 +714,7 @@ end
         groupbox.ContentFrame = contentFrame
         
         -- Add all Linoria-style methods to groupbox
-        for methodName, method in pairs(self.GroupboxMethods) do
+        for methodName, method in pairs(NexusUI.GroupboxMethods) do
             groupbox[methodName] = function(...)
                 return method(groupbox, ...)
             end
@@ -725,7 +725,7 @@ end
     
     function window:Destroy()
         screenGui:Destroy()
-        self.ParticleState.IsDestroyed = true
+        NexusUI.ParticleState.IsDestroyed = true
     end
     
     window.Gui = screenGui
@@ -752,10 +752,10 @@ function NexusUI.GroupboxMethods:AddLabel(config)
         TextSize = 14,
         Font = Enum.Font.Gotham,
         ZIndex = 1003,
-        Parent = self.ContentFrame
+        Parent = NexusUI.ContentFrame
     })
     
-    table.insert(self.Elements, label)
+    table.insert(NexusUI.Elements, label)
     table.insert(NexusUI.Labels, label)
     
     function label:SetText(newText)
@@ -782,7 +782,7 @@ function NexusUI.GroupboxMethods:AddButton(config)
         Font = Enum.Font.Gotham,
         AutoButtonColor = false,
         ZIndex = 1003,
-        Parent = self.ContentFrame
+        Parent = NexusUI.ContentFrame
     })
     
     local corner = NexusUI:Create("UICorner", {
@@ -817,7 +817,7 @@ function NexusUI.GroupboxMethods:AddButton(config)
         buttonFrame.Visible = visible
     end
     
-    table.insert(self.Elements, button)
+    table.insert(NexusUI.Elements, button)
     table.insert(NexusUI.Buttons, button)
     
     return button
@@ -834,7 +834,7 @@ function NexusUI.GroupboxMethods:AddToggle(config)
         Size = UDim2.new(1, 0, 0, 30),
         BackgroundTransparency = 1,
         ZIndex = 1003,
-        Parent = self.ContentFrame
+        Parent = NexusUI.ContentFrame
     })
     
     local toggleButton = NexusUI:Create("TextButton", {
@@ -902,7 +902,7 @@ function NexusUI.GroupboxMethods:AddToggle(config)
     end
     
     updateToggle()
-    table.insert(self.Elements, toggle)
+    table.insert(NexusUI.Elements, toggle)
     table.insert(NexusUI.Toggles, toggle)
     
     return toggle
@@ -921,7 +921,7 @@ function NexusUI.GroupboxMethods:AddSlider(config)
         Size = UDim2.new(1, 0, 0, 50),
         BackgroundTransparency = 1,
         ZIndex = 1003,
-        Parent = self.ContentFrame
+        Parent = NexusUI.ContentFrame
     })
     
     local sliderLabel = NexusUI:CreateLabel({
@@ -1043,7 +1043,7 @@ function NexusUI.GroupboxMethods:AddSlider(config)
     end
     
     updateSlider()
-    table.insert(self.Elements, slider)
+    table.insert(NexusUI.Elements, slider)
     table.insert(NexusUI.Options, slider)
     
     return slider
@@ -1062,7 +1062,7 @@ function NexusUI.GroupboxMethods:AddDropdown(config)
         Size = UDim2.new(1, 0, 0, 30),
         BackgroundTransparency = 1,
         ZIndex = 1003,
-        Parent = self.ContentFrame
+        Parent = NexusUI.ContentFrame
     })
     
     local dropdownButton = NexusUI:Create("TextButton", {
@@ -1190,7 +1190,7 @@ function NexusUI.GroupboxMethods:AddDropdown(config)
     end
     
     updateDropdown()
-    table.insert(self.Elements, dropdown)
+    table.insert(NexusUI.Elements, dropdown)
     table.insert(NexusUI.Options, dropdown)
     
     return dropdown
@@ -1207,7 +1207,7 @@ function NexusUI.GroupboxMethods:AddInput(config)
         Size = UDim2.new(1, 0, 0, 30),
         BackgroundTransparency = 1,
         ZIndex = 1003,
-        Parent = self.ContentFrame
+        Parent = NexusUI.ContentFrame
     })
     
     local inputLabel = NexusUI:CreateLabel({
@@ -1261,7 +1261,7 @@ function NexusUI.GroupboxMethods:AddInput(config)
         input.Changed = callback
     end
     
-    table.insert(self.Elements, input)
+    table.insert(NexusUI.Elements, input)
     table.insert(NexusUI.Options, input)
     
     return input
@@ -1279,7 +1279,7 @@ function NexusUI.GroupboxMethods:AddKeybind(config)
         Size = UDim2.new(1, 0, 0, 30),
         BackgroundTransparency = 1,
         ZIndex = 1003,
-        Parent = self.ContentFrame
+        Parent = NexusUI.ContentFrame
     })
     
     local keybindLabel = NexusUI:CreateLabel({
@@ -1346,7 +1346,7 @@ function NexusUI.GroupboxMethods:AddKeybind(config)
         keybind.Changed = callback
     end
     
-    table.insert(self.Elements, keybind)
+    table.insert(NexusUI.Elements, keybind)
     table.insert(NexusUI.Options, keybind)
     
     return keybind
@@ -1363,7 +1363,7 @@ function NexusUI.GroupboxMethods:AddColorpicker(config)
         Size = UDim2.new(1, 0, 0, 30),
         BackgroundTransparency = 1,
         ZIndex = 1003,
-        Parent = self.ContentFrame
+        Parent = NexusUI.ContentFrame
     })
     
     local colorpickerLabel = NexusUI:CreateLabel({
@@ -1416,7 +1416,7 @@ function NexusUI.GroupboxMethods:AddColorpicker(config)
         colorpicker.Changed = callback
     end
     
-    table.insert(self.Elements, colorpicker)
+    table.insert(NexusUI.Elements, colorpicker)
     table.insert(NexusUI.Options, colorpicker)
     
     return colorpicker
@@ -1437,7 +1437,7 @@ function NexusUI:Notify(title, message, duration)
     local notificationFrame = NexusUI("Frame", {
         Size = UDim2.new(0, 300, 0, 80),
         Position = UDim2.new(1, -320, 1, -100),
-        BackgroundColor3 = self.Colors.Surface,
+        BackgroundColor3 = NexusUI.Colors.Surface,
         BorderSizePixel = 0,
         ZIndex = 2000,
         Parent = notificationGui
@@ -1449,7 +1449,7 @@ function NexusUI:Notify(title, message, duration)
     })
     
     local stroke = NexusUI("UIStroke", {
-        Color = self.Colors.PinkMedium,
+        Color = NexusUI.Colors.PinkMedium,
         Thickness = 2,
         Parent = notificationFrame
     })
@@ -1458,7 +1458,7 @@ function NexusUI:Notify(title, message, duration)
         Size = UDim2.new(1, -20, 0, 25),
         Position = UDim2.new(0, 10, 0, 5),
         Text = title,
-        TextColor3 = self.Colors.TextPrimary,
+        TextColor3 = NexusUI.Colors.TextPrimary,
         TextSize = 16,
         Font = Enum.Font.GothamBold,
         ZIndex = 2001,
@@ -1469,7 +1469,7 @@ function NexusUI:Notify(title, message, duration)
         Size = UDim2.new(1, -20, 1, -35),
         Position = UDim2.new(0, 10, 0, 30),
         Text = message,
-        TextColor3 = self.Colors.TextSecondary,
+        TextColor3 = NexusUI.Colors.TextSecondary,
         TextSize = 14,
         Font = Enum.Font.Gotham,
         TextWrapped = true,
@@ -1500,16 +1500,16 @@ end
 -- INITIALIZATION
 -- ========================================
 function NexusUI:Init()
-    self.Initialized = true
+    NexusUI.Initialized = true
     
     -- Make global (like Linoria)
-    getgenv().NexusUI = self
-    getgenv().Toggles = self.Toggles
-    getgenv().Options = self.Options
-    getgenv().Labels = self.Labels
-    getgenv().Buttons = self.Buttons
+    getgenv().NexusUI = NexusUI
+    getgenv().Toggles = NexusUI.Toggles
+    getgenv().Options = NexusUI.Options
+    getgenv().Labels = NexusUI.Labels
+    getgenv().Buttons = NexusUI.Buttons
     
-    return self
+    return NexusUI
 end
 
 -- Initialize the library
