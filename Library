@@ -1,4 +1,8 @@
- local uis = Services.UserInputService
+loadstring([[
+    function LPH_NO_VIRTUALIZE(f) return f end;
+]])();
+
+local uis = Services.UserInputService
     local players = Services.Players
     local ws = Services.Workspace
     local rs = Services.ReplicatedStorage
