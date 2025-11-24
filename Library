@@ -64,9 +64,22 @@ local uis = Services.UserInputService
 -- 
 
 -- Library init
+    getgenv().library = {
+        directory = "milenium",
+        folders = {
+            "/fonts",
+            "/configs",
+        },
+        flags = {},
+        config_flags = {},
+        connections = {},   
+        notifications = {notifs = {}},
+        current_open; 
+    }
+
     local themes = {
         preset = {
-            accent = rgb(0, 162, 255),
+            accent = rgb(155, 150, 219),
         }, 
 
         utility = {
