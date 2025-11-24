@@ -1,5 +1,5 @@
 -- Nexus UI Library v1.0
--- Fully custom UI library with Max Money style design
+-- Pure UI library with Max Money style design
 
 local Nexus = {
     Version = "1.0",
@@ -12,7 +12,6 @@ local Nexus = {
 
 -- Services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -102,7 +101,12 @@ end
 Nexus.Utils.Create = function(className, properties)
     local obj = Instance.new(className)
     for prop, value in pairs(properties) do
-        obj[prop] = value
+        if prop ~= "Parent" then
+            obj[prop] = value
+        end
+    end
+    if properties.Parent then
+        obj.Parent = properties.Parent
     end
     return obj
 end
@@ -466,7 +470,8 @@ function Nexus:CreateWindow(options)
         EnableDragging = options.EnableDragging ~= false,
         ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift,
         Sections = {},
-        Elements = {}
+        Tabs = {},
+        CurrentTab = nil
     }
     
     -- Create ScreenGui
@@ -606,21 +611,31 @@ function Nexus:CreateWindow(options)
         })
     end
     
-    -- Content Area
-    window.Content = Nexus.Utils.Create("Frame", {
-        Name = "Content",
-        Size = UDim2.new(1, -40, 1, -100),
-        Position = UDim2.new(0, 20, 0, 90),
+    -- Tabs Container
+    window.TabsContainer = Nexus.Utils.Create("Frame", {
+        Name = "TabsContainer",
+        Size = UDim2.new(1, -40, 0, 40),
+        Position = UDim2.new(0, 20, 0, 80),
         BackgroundTransparency = 1,
         ZIndex = 1001,
         Parent = window.MainContainer
     })
     
-    -- Content Layout
-    window.ContentLayout = Nexus.Utils.Create("UIListLayout", {
+    window.TabsLayout = Nexus.Utils.Create("UIListLayout", {
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 10),
-        Parent = window.Content
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0, 5),
+        Parent = window.TabsContainer
+    })
+    
+    -- Content Area
+    window.Content = Nexus.Utils.Create("Frame", {
+        Name = "Content",
+        Size = UDim2.new(1, -40, 1, -140),
+        Position = UDim2.new(0, 20, 0, 130),
+        BackgroundTransparency = 1,
+        ZIndex = 1001,
+        Parent = window.MainContainer
     })
     
     -- Reopen Button
@@ -701,10 +716,23 @@ function Nexus:CreateWindow(options)
         end
     end
     
+    function window:AddTab(options)
+        local tab = self:CreateTab(options, self.TabsContainer, self.Content)
+        table.insert(self.Tabs, tab)
+        
+        if #self.Tabs == 1 then
+            self.CurrentTab = tab
+            tab:Select()
+        end
+        
+        return tab
+    end
+    
     function window:AddSection(options)
-        local section = self:CreateSection(options)
-        table.insert(self.Sections, section)
-        return section
+        if not self.CurrentTab then
+            error("No tab selected. Add a tab first or create sections within a tab.")
+        end
+        return self.CurrentTab:AddSection(options)
     end
     
     -- Start animations
@@ -733,13 +761,118 @@ function Nexus:CreateWindow(options)
         end)
     end
     
+    -- Reopen button functionality
+    window.ReopenButton.MouseButton1Click:Connect(function()
+        window:SetVisible(true)
+        Nexus.Utils.Tween(window.ReopenButton, {
+            Size = UDim2.new(0, 0, 0, 0)
+        })
+    end)
+    
+    function window:Hide()
+        self:SetVisible(false)
+        Nexus.Utils.Tween(self.ReopenButton, {
+            Size = UDim2.new(0, 60, 0, 60)
+        })
+    end
+    
     return window
+end
+
+-- ========================================
+-- TAB COMPONENT
+-- ========================================
+function Nexus:CreateTab(options, tabsParent, contentParent)
+    local options = options or {}
+    local tab = {
+        Name = options.Name or "Tab",
+        Text = options.Text or "Tab",
+        Sections = {},
+        ContentVisible = false
+    }
+    
+    tab.Button = Nexus.Utils.Create("TextButton", {
+        Name = tab.Name,
+        Size = UDim2.new(0, 80, 1, 0),
+        BackgroundColor3 = self.Colors.Current.Primary,
+        BorderSizePixel = 0,
+        Text = tab.Text,
+        TextColor3 = self.Colors.Current.TextPrimary,
+        TextSize = 12,
+        Font = Enum.Font.GothamMedium,
+        AutoButtonColor = false,
+        Parent = tabsParent
+    })
+    
+    Nexus.Utils.Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = tab.Button
+    })
+    
+    tab.Content = Nexus.Utils.Create("ScrollingFrame", {
+        Name = tab.Name .. "Content",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Visible = false,
+        Parent = contentParent
+    })
+    
+    tab.ContentLayout = Nexus.Utils.Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 10),
+        Parent = tab.Content
+    })
+    
+    tab.ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tab.Content.CanvasSize = UDim2.new(0, 0, 0, tab.ContentLayout.AbsoluteContentSize.Y)
+    end)
+    
+    function tab:Select()
+        -- Hide all other tabs
+        for _, otherTab in ipairs(tabsParent:GetChildren()) do
+            if otherTab:IsA("TextButton") then
+                Nexus.Utils.Tween(otherTab, {
+                    BackgroundColor3 = self.Colors.Current.Primary
+                })
+            end
+        end
+        
+        -- Hide all tab contents
+        for _, content in ipairs(contentParent:GetChildren()) do
+            if content:IsA("ScrollingFrame") then
+                content.Visible = false
+            end
+        end
+        
+        -- Show this tab
+        Nexus.Utils.Tween(self.Button, {
+            BackgroundColor3 = self.Colors.Current.PinkMedium
+        })
+        
+        self.Content.Visible = true
+        self.ContentVisible = true
+    end
+    
+    function tab:AddSection(options)
+        local section = Nexus:CreateSection(options, self.Content)
+        table.insert(self.Sections, section)
+        return section
+    end
+    
+    tab.Button.MouseButton1Click:Connect(function()
+        tab:Select()
+    end)
+    
+    return tab
 end
 
 -- ========================================
 -- SECTION COMPONENT
 -- ========================================
-function Nexus:CreateSection(options)
+function Nexus:CreateSection(options, parent)
     local options = options or {}
     local section = {
         Name = options.Name or "Section",
@@ -753,7 +886,7 @@ function Nexus:CreateSection(options)
         Size = UDim2.new(1, 0, 0, options.Height or 200),
         BackgroundTransparency = 1,
         LayoutOrder = section.LayoutOrder,
-        Parent = options.Parent or error("Section needs a parent")
+        Parent = parent
     })
     
     -- Section Title
@@ -1113,7 +1246,7 @@ function Nexus:CreateDropdown(options, parent)
     })
     
     dropdown.Label = Nexus.Utils.Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 30),
+        Size = UDim2.new(0.6, 0, 1, 0),
         BackgroundTransparency = 1,
         Text = dropdown.Text,
         TextColor3 = self.Colors.Current.TextPrimary,
@@ -1231,12 +1364,30 @@ function Nexus:CreateDropdown(options, parent)
     
     function dropdown:SetOptions(newOptions)
         self.Options = newOptions
-        self.OptionsFrame:ClearAllChildren()
+        for i, v in ipairs(self.OptionsFrame:GetChildren()) do
+            if v:IsA("TextButton") then
+                v:Destroy()
+            end
+        end
         updateOptions()
     end
     
     dropdown.MainButton.MouseButton1Click:Connect(function()
         dropdown:Toggle()
+    end)
+    
+    -- Close dropdown when clicking outside
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and dropdown.IsOpen then
+            local mousePos = input.Position
+            local optionsAbsolutePos = dropdown.OptionsFrame.AbsolutePosition
+            local optionsAbsoluteSize = dropdown.OptionsFrame.AbsoluteSize
+            
+            if mousePos.X < optionsAbsolutePos.X or mousePos.X > optionsAbsolutePos.X + optionsAbsoluteSize.X or
+               mousePos.Y < optionsAbsolutePos.Y or mousePos.Y > optionsAbsolutePos.Y + optionsAbsoluteSize.Y then
+                dropdown:Close()
+            end
+        end
     end)
     
     updateOptions()
