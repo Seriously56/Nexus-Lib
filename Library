@@ -1,6 +1,4 @@
--- Nexus UI Library v1.0
--- Pure UI library with Max Money style design
-
+-- Nexus UI Library v1.0 with GroupBox support
 local Nexus = {
     Version = "1.0",
     Colors = {},
@@ -979,6 +977,7 @@ function Nexus:CreateGroupBox(options, parent)
     
     return groupbox
 end
+
 -- ========================================
 -- BUTTON COMPONENT
 -- ========================================
@@ -1023,7 +1022,7 @@ function Nexus:CreateButton(options, parent)
         Nexus.Utils.Tween(button.Container, {
             BackgroundColor3 = self.Colors.Current.HoverPrimary
         })
-    end)
+    end
     
     button.Container.MouseLeave:Connect(function()
         Nexus.Utils.Tween(button.Container, {
