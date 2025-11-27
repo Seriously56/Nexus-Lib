@@ -1,19 +1,19 @@
--- Nexus UI Library (Max Money Style Design)
--- Replicates Auto Dupe GUI with particles and animations
-
-local NexusUI = {}
-NexusUI.__index = NexusUI
-
--- Services
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local cloneref = (cloneref or clonereference or function(instance: any) return instance end)
+local InputService = cloneref(game:GetService('UserInputService'))
+local TextService = cloneref(game:GetService('TextService'))
+local CoreGui = cloneref(game:GetService('CoreGui'))
+local Teams = cloneref(game:GetService('Teams'))
+local Players = cloneref(game:GetService('Players'))
+local RunService = cloneref(game:GetService('RunService'))
+local TweenService = cloneref(game:GetService('TweenService'))
+local RenderStepped = RunService.RenderStepped
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
 -- ========================================
 -- MAX MONEY STYLE COLOR SCHEME
 -- ========================================
-NexusUI.Colors = {
+local Colors = {
     Background = Color3.fromRGB(15, 8, 15),
     Surface = Color3.fromRGB(25, 15, 25),
     Primary = Color3.fromRGB(40, 25, 35),
@@ -39,32 +39,21 @@ NexusUI.Colors = {
 }
 
 -- ========================================
--- PARTICLE SYSTEM
+-- PARTICLE SYSTEM (CONFINED TO GUI)
 -- ========================================
-NexusUI.ParticleSystem = {}
-NexusUI.ParticleSystem.__index = NexusUI.ParticleSystem
+local ParticleState = {
+    Particles = {},
+    IsDestroyed = false,
+    MousePosition = {X = 0, Y = 0},
+    GuiBounds = {MinX = 0, MaxX = 0, MinY = 0, MaxY = 0}
+}
 
-function NexusUI.ParticleSystem.new(container)
-    local self = setmetatable({}, NexusUI.ParticleSystem)
+local function UpdateGuiBounds(container)
+    if not container then return end
+    local absolutePosition = container.AbsolutePosition
+    local absoluteSize = container.AbsoluteSize
     
-    self.Particles = {}
-    self.IsDestroyed = false
-    self.MousePosition = {X = 0, Y = 0}
-    self.GuiBounds = {MinX = 0, MaxX = 0, MinY = 0, MaxY = 0}
-    self.Container = container
-    
-    self:UpdateGuiBounds()
-    self:Start()
-    
-    return self
-end
-
-function NexusUI.ParticleSystem:UpdateGuiBounds()
-    if not self.Container then return end
-    local absolutePosition = self.Container.AbsolutePosition
-    local absoluteSize = self.Container.AbsoluteSize
-    
-    self.GuiBounds = {
+    ParticleState.GuiBounds = {
         MinX = absolutePosition.X,
         MaxX = absolutePosition.X + absoluteSize.X,
         MinY = absolutePosition.Y,
@@ -72,8 +61,8 @@ function NexusUI.ParticleSystem:UpdateGuiBounds()
     }
 end
 
-function NexusUI.ParticleSystem:CreateParticle()
-    if not self.Container or not self.Container.Parent or self.IsDestroyed then
+local function CreateParticle(container)
+    if not container or not container.Parent or ParticleState.IsDestroyed then
         return nil
     end
     
@@ -81,16 +70,17 @@ function NexusUI.ParticleSystem:CreateParticle()
     local particle = Instance.new('Frame')
     particle.Size = UDim2.new(0, size, 0, size)
     
+    -- Start particles within GUI bounds
     local startX = math.random(0, 100) / 100
     local startY = math.random(0, 100) / 100
     particle.Position = UDim2.new(startX, 0, startY, 0)
     
-    particle.BackgroundColor3 = NexusUI.Colors.PinkLight
+    particle.BackgroundColor3 = Colors.PinkLight
     particle.BackgroundTransparency = math.random(60, 85) / 100
     particle.BorderSizePixel = 0
     particle.ZIndex = 5
     particle.Selectable = false
-    particle.Parent = self.Container
+    particle.Parent = container
     
     local corner = Instance.new('UICorner')
     corner.CornerRadius = UDim.new(1, 0)
@@ -98,9 +88,9 @@ function NexusUI.ParticleSystem:CreateParticle()
     
     local gradient = Instance.new('UIGradient')
     local bubbleColors = {
-        NexusUI.Colors.PinkLight,
-        NexusUI.Colors.PinkMedium,
-        NexusUI.Colors.PinkDark,
+        Colors.PinkLight,
+        Colors.PinkMedium,
+        Colors.PinkDark,
         Color3.fromRGB(255, 150, 200)
     }
     local color1 = bubbleColors[math.random(#bubbleColors)]
@@ -131,7 +121,7 @@ function NexusUI.ParticleSystem:CreateParticle()
     local glow = Instance.new('Frame')
     glow.Size = UDim2.new(1.8, 0, 1.8, 0)
     glow.Position = UDim2.new(-0.4, 0, -0.4, 0)
-    glow.BackgroundColor3 = NexusUI.Colors.PinkLight
+    glow.BackgroundColor3 = Colors.PinkLight
     glow.BackgroundTransparency = 0.9
     glow.BorderSizePixel = 0
     glow.ZIndex = particle.ZIndex - 1
@@ -160,31 +150,32 @@ function NexusUI.ParticleSystem:CreateParticle()
         mass = size / 10
     }
     
-    table.insert(self.Particles, particleData)
+    table.insert(ParticleState.Particles, particleData)
     return particle
 end
 
-function NexusUI.ParticleSystem:UpdateParticles()
-    if self.IsDestroyed or not self.Container then return end
+local function UpdateParticles(container)
+    if ParticleState.IsDestroyed or not container then return end
     
-    self:UpdateGuiBounds()
+    -- Update GUI bounds in case of movement
+    UpdateGuiBounds(container)
     
-    local screenSize = self.Container.AbsoluteSize
-    local mouseScreenX = (self.MousePosition.X - self.GuiBounds.MinX) / screenSize.X
-    local mouseScreenY = (self.MousePosition.Y - self.GuiBounds.MinY) / screenSize.Y
+    local screenSize = container.AbsoluteSize
+    local mouseScreenX = (ParticleState.MousePosition.X - ParticleState.GuiBounds.MinX) / screenSize.X
+    local mouseScreenY = (ParticleState.MousePosition.Y - ParticleState.GuiBounds.MinY) / screenSize.Y
     
-    for i = #self.Particles, 1, -1 do
-        local p = self.Particles[i]
+    for i = #ParticleState.Particles, 1, -1 do
+        local p = ParticleState.Particles[i]
         
         if not p or not p.frame or not p.frame.Parent then
-            table.remove(self.Particles, i)
+            table.remove(ParticleState.Particles, i)
         else
             local currentPos = p.frame.Position
             local age = tick() - p.created
             
             if age > p.lifetime then
                 p.frame:Destroy()
-                table.remove(self.Particles, i)
+                table.remove(ParticleState.Particles, i)
             else
                 local distanceToMouse = math.sqrt(
                     (currentPos.X.Scale - mouseScreenX)^2 + 
@@ -213,6 +204,7 @@ function NexusUI.ParticleSystem:UpdateParticles()
                 local newX = currentPos.X.Scale + p.vx + p.repelForce.x
                 local newY = currentPos.Y.Scale + p.vy + p.repelForce.y
                 
+                -- Keep particles within GUI bounds (0 to 1 scale)
                 if newX < 0 then 
                     newX = 0 
                     p.vx = math.abs(p.vx) * 0.5
@@ -265,31 +257,35 @@ function NexusUI.ParticleSystem:UpdateParticles()
     end
 end
 
-function NexusUI.ParticleSystem:Start()
-    -- Mouse tracking
+local function StartParticleSystem(container)
+    -- Update initial GUI bounds
+    UpdateGuiBounds(container)
+    
+    -- Mouse tracking for particle interaction (only within GUI)
     UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             local mousePos = input.Position
-            if mousePos.X >= self.GuiBounds.MinX and mousePos.X <= self.GuiBounds.MaxX and
-               mousePos.Y >= self.GuiBounds.MinY and mousePos.Y <= self.GuiBounds.MaxY then
-                self.MousePosition.X = mousePos.X
-                self.MousePosition.Y = mousePos.Y
+            -- Only track mouse if it's within GUI bounds
+            if mousePos.X >= ParticleState.GuiBounds.MinX and mousePos.X <= ParticleState.GuiBounds.MaxX and
+               mousePos.Y >= ParticleState.GuiBounds.MinY and mousePos.Y <= ParticleState.GuiBounds.MaxY then
+                ParticleState.MousePosition.X = mousePos.X
+                ParticleState.MousePosition.Y = mousePos.Y
             end
         end
     end)
     
-    -- Initial particle creation
+    -- Initial particle creation within GUI
     task.spawn(function()
         for i = 1, 20 do
-            if self.IsDestroyed then break end
-            self:CreateParticle()
+            if ParticleState.IsDestroyed then break end
+            CreateParticle(container)
             task.wait(math.random(20, 100) / 1000)
         end
         
         -- Continuous particle generation
-        while not self.IsDestroyed and self.Container.Parent do
-            if #self.Particles < 40 then
-                self:CreateParticle()
+        while not ParticleState.IsDestroyed and container.Parent do
+            if #ParticleState.Particles < 40 then
+                CreateParticle(container)
             end
             task.wait(math.random(400, 1200) / 1000)
         end
@@ -297,552 +293,956 @@ function NexusUI.ParticleSystem:Start()
     
     -- Particle update loop
     task.spawn(function()
-        while not self.IsDestroyed and self.Container.Parent do
-            pcall(function() self:UpdateParticles() end)
+        while not ParticleState.IsDestroyed and container.Parent do
+            pcall(function() UpdateParticles(container) end)
             task.wait(1/60)
         end
     end)
 end
 
-function NexusUI.ParticleSystem:Destroy()
-    self.IsDestroyed = true
-    for _, particle in ipairs(self.Particles) do
-        if particle.frame then
-            particle.frame:Destroy()
-        end
-    end
-    self.Particles = {}
-end
-
 -- ========================================
--- BASE WINDOW CLASS
+-- ENHANCED NEXUS GUI WITH FULL UI LIBRARY FUNCTIONALITY
 -- ========================================
-function NexusUI.CreateWindow(options)
-    local self = setmetatable({}, NexusUI)
+local NexusGUI = {}
+
+function NexusGUI:Create()
+    local self = setmetatable({}, {__index = NexusGUI})
     
-    -- Default options
-    self.options = {
-        title = options.title or "NEXUS",
-        subtitle = options.subtitle or "AUTO DUPE",
-        size = options.size or UDim2.new(0, 250, 0, 400),
-        position = options.position or UDim2.new(0.5, -125, 0.5, -200),
-        showReopenButton = options.showReopenButton ~= false,
-        keybind = options.keybind or Enum.KeyCode.RightShift
+    -- Create ScreenGui
+    self.ScreenGui = Instance.new("ScreenGui")
+    self.ScreenGui.Name = "NexusPureGUI"
+    self.ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+    self.ScreenGui.ResetOnSpawn = false
+    self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    self.ScreenGui.IgnoreGuiInset = true
+
+    -- Main Container
+    self.MainContainer = Instance.new("Frame")
+    self.MainContainer.Name = "MainContainer"
+    self.MainContainer.Size = UDim2.new(0, 550, 0, 600)
+    self.MainContainer.Position = UDim2.new(0.5, -275, 0.5, -300)
+    self.MainContainer.BackgroundColor3 = Colors.Surface
+    self.MainContainer.BackgroundTransparency = 0
+    self.MainContainer.BorderSizePixel = 0
+    self.MainContainer.ZIndex = 1000
+    self.MainContainer.Parent = self.ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 20)
+    Corner.Parent = self.MainContainer
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Colors.PinkMedium
+    Stroke.Thickness = 2
+    Stroke.Transparency = 0.2
+    Stroke.Parent = self.MainContainer
+
+    -- Particle Container
+    self.ParticleContainer = Instance.new("Frame")
+    self.ParticleContainer.Size = UDim2.new(1, 0, 1, 0)
+    self.ParticleContainer.BackgroundTransparency = 1
+    self.ParticleContainer.ZIndex = 5
+    self.ParticleContainer.Parent = self.MainContainer
+
+    -- Animated Border
+    self.AnimatedBorder = Instance.new("Frame")
+    self.AnimatedBorder.Name = "AnimatedBorder"
+    self.AnimatedBorder.Size = UDim2.new(1, 8, 1, 8)
+    self.AnimatedBorder.Position = UDim2.new(0, -4, 0, -4)
+    self.AnimatedBorder.BackgroundTransparency = 1
+    self.AnimatedBorder.ZIndex = 999
+    self.AnimatedBorder.Parent = self.MainContainer
+
+    local BorderCorner = Instance.new("UICorner")
+    BorderCorner.CornerRadius = UDim.new(0, 24)
+    BorderCorner.Parent = self.AnimatedBorder
+
+    local BorderStroke = Instance.new("UIStroke")  
+    BorderStroke.Color = Colors.PinkLight
+    BorderStroke.Thickness = 3
+    BorderStroke.Transparency = 0.3
+    BorderStroke.Parent = self.AnimatedBorder
+
+    local BorderGradient = Instance.new("UIGradient")
+    BorderGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Colors.PinkLight),
+        ColorSequenceKeypoint.new(0.3, Colors.PinkMedium),
+        ColorSequenceKeypoint.new(0.7, Colors.PinkDark),
+        ColorSequenceKeypoint.new(1, Colors.PinkLight)
     }
-    
-    self.elements = {}
-    self.connections = {}
-    self.isVisible = true
-    
-    self:CreateScreenGui()
-    self:CreateMainContainer()
-    self:CreateParticleSystem()
-    self:CreateHeader()
-    self:CreateAnimatedBorder()
-    self:CreateContentArea()
-    self:SetupDragging()
-    self:SetupKeybinds()
-    self:PlayEntranceAnimation()
-    
-    return self
-end
-
-function NexusUI:CreateScreenGui()
-    self.screenGui = Instance.new("ScreenGui")
-    self.screenGui.Name = "NexusUILibrary"
-    self.screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-    self.screenGui.ResetOnSpawn = false
-    self.screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    self.screenGui.IgnoreGuiInset = true
-end
-
-function NexusUI:CreateMainContainer()
-    self.mainContainer = Instance.new("Frame")
-    self.mainContainer.Name = "MainContainer"
-    self.mainContainer.Size = self.options.size
-    self.mainContainer.Position = self.options.position
-    self.mainContainer.BackgroundColor3 = NexusUI.Colors.Surface
-    self.mainContainer.BackgroundTransparency = 0
-    self.mainContainer.BorderSizePixel = 0
-    self.mainContainer.ZIndex = 1000
-    self.mainContainer.Parent = self.screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 20)
-    corner.Parent = self.mainContainer
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = NexusUI.Colors.PinkMedium
-    stroke.Thickness = 2
-    stroke.Transparency = 0.2
-    stroke.Parent = self.mainContainer
-end
-
-function NexusUI:CreateParticleSystem()
-    self.particleContainer = Instance.new("Frame")
-    self.particleContainer.Size = UDim2.new(1, 0, 1, 0)
-    self.particleContainer.BackgroundTransparency = 1
-    self.particleContainer.ZIndex = 5
-    self.particleContainer.Parent = self.mainContainer
-    
-    self.particleSystem = NexusUI.ParticleSystem.new(self.particleContainer)
-end
-
-function NexusUI:CreateHeader()
-    self.header = Instance.new("Frame")
-    self.header.Name = "Header"
-    self.header.Size = UDim2.new(1, 0, 0, 120)
-    self.header.BackgroundTransparency = 1
-    self.header.ZIndex = 1001
-    self.header.Parent = self.mainContainer
-
-    local titleContainer = Instance.new("Frame")
-    titleContainer.Size = UDim2.new(1, -40, 0, 100)
-    titleContainer.Position = UDim2.new(0, 20, 0, 10)
-    titleContainer.BackgroundTransparency = 1
-    titleContainer.ZIndex = 1001
-    titleContainer.Parent = self.header
-
-    -- Title Text
-    local titleText = Instance.new("TextLabel")
-    titleText.Size = UDim2.new(1, 0, 0.5, 0)
-    titleText.BackgroundTransparency = 1
-    titleText.Text = self.options.title
-    titleText.TextColor3 = NexusUI.Colors.TextPrimary
-    titleText.TextScaled = true
-    titleText.Font = Enum.Font.GothamBlack
-    titleText.TextStrokeTransparency = 0.7
-    titleText.TextStrokeColor3 = NexusUI.Colors.PinkDark
-    titleText.ZIndex = 1002
-    titleText.Parent = titleContainer
-
-    local titleGradient = Instance.new("UIGradient")
-    titleGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkLight),
-        ColorSequenceKeypoint.new(0.5, NexusUI.Colors.PinkMedium),
-        ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkDark)
-    }
-    titleGradient.Rotation = 45
-    titleGradient.Parent = titleText
-
-    -- Subtitle Text
-    if self.options.subtitle then
-        local subtitleText = Instance.new("TextLabel")
-        subtitleText.Size = UDim2.new(1, 0, 0.5, 0)
-        subtitleText.Position = UDim2.new(0, 0, 0.5, 0)
-        subtitleText.BackgroundTransparency = 1
-        subtitleText.Text = self.options.subtitle
-        subtitleText.TextColor3 = NexusUI.Colors.TextPrimary
-        subtitleText.TextScaled = true
-        subtitleText.Font = Enum.Font.GothamBlack
-        subtitleText.TextStrokeTransparency = 0.7
-        subtitleText.TextStrokeColor3 = NexusUI.Colors.PinkDark
-        subtitleText.ZIndex = 1002
-        subtitleText.Parent = titleContainer
-
-        local subtitleGradient = Instance.new("UIGradient")
-        subtitleGradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkDark),
-            ColorSequenceKeypoint.new(0.5, NexusUI.Colors.PinkMedium),
-            ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkLight)
-        }
-        subtitleGradient.Rotation = -45
-        subtitleGradient.Parent = subtitleText
-    end
-end
-
-function NexusUI:CreateAnimatedBorder()
-    self.animatedBorder = Instance.new("Frame")
-    self.animatedBorder.Name = "AnimatedBorder"
-    self.animatedBorder.Size = UDim2.new(1, 8, 1, 8)
-    self.animatedBorder.Position = UDim2.new(0, -4, 0, -4)
-    self.animatedBorder.BackgroundTransparency = 1
-    self.animatedBorder.ZIndex = 999
-    self.animatedBorder.Parent = self.mainContainer
-
-    local borderCorner = Instance.new("UICorner")
-    borderCorner.CornerRadius = UDim.new(0, 24)
-    borderCorner.Parent = self.animatedBorder
-
-    local borderStroke = Instance.new("UIStroke")  
-    borderStroke.Color = NexusUI.Colors.PinkLight
-    borderStroke.Thickness = 3
-    borderStroke.Transparency = 0.3
-    borderStroke.Parent = self.animatedBorder
-
-    local borderGradient = Instance.new("UIGradient")
-    borderGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkLight),
-        ColorSequenceKeypoint.new(0.3, NexusUI.Colors.PinkMedium),
-        ColorSequenceKeypoint.new(0.7, NexusUI.Colors.PinkDark),
-        ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkLight)
-    }
-    borderGradient.Transparency = NumberSequence.new{
+    BorderGradient.Transparency = NumberSequence.new{
         NumberSequenceKeypoint.new(0, 0.8),
         NumberSequenceKeypoint.new(0.2, 0.1),
         NumberSequenceKeypoint.new(0.8, 0.1),
         NumberSequenceKeypoint.new(1, 0.8)
     }
-    borderGradient.Parent = borderStroke
+    BorderGradient.Parent = BorderStroke
 
-    -- Start border animation
-    self.borderTween = TweenService:Create(borderGradient, 
+    -- Header
+    self.Header = Instance.new("Frame")
+    self.Header.Name = "Header"
+    self.Header.Size = UDim2.new(1, 0, 0, 80)
+    self.Header.BackgroundTransparency = 1
+    self.Header.ZIndex = 1001
+    self.Header.Parent = self.MainContainer
+
+    -- Title
+    self.TitleContainer = Instance.new("Frame")
+    self.TitleContainer.Size = UDim2.new(1, -40, 0, 60)
+    self.TitleContainer.Position = UDim2.new(0, 20, 0, 10)
+    self.TitleContainer.BackgroundTransparency = 1
+    self.TitleContainer.ZIndex = 1001
+    self.TitleContainer.Parent = self.Header
+
+    self.NexusText = Instance.new("TextLabel")
+    self.NexusText.Size = UDim2.new(1, 0, 0.5, 0)
+    self.NexusText.BackgroundTransparency = 1
+    self.NexusText.Text = "NEXUS"
+    self.NexusText.TextColor3 = Colors.TextPrimary
+    self.NexusText.TextScaled = true
+    self.NexusText.Font = Enum.Font.GothamBlack
+    self.NexusText.TextStrokeTransparency = 0.7
+    self.NexusText.TextStrokeColor3 = Colors.PinkDark
+    self.NexusText.ZIndex = 1002
+    self.NexusText.Parent = self.TitleContainer
+
+    self.NexusGradient = Instance.new("UIGradient")
+    self.NexusGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Colors.PinkLight),
+        ColorSequenceKeypoint.new(0.5, Colors.PinkMedium),
+        ColorSequenceKeypoint.new(1, Colors.PinkDark)
+    }
+    self.NexusGradient.Rotation = 45
+    self.NexusGradient.Parent = self.NexusText
+
+    self.SubtitleText = Instance.new("TextLabel")
+    self.SubtitleText.Size = UDim2.new(1, 0, 0.5, 0)
+    self.SubtitleText.Position = UDim2.new(0, 0, 0.5, 0)
+    self.SubtitleText.BackgroundTransparency = 1
+    self.SubtitleText.Text = "PURE GUI"
+    self.SubtitleText.TextColor3 = Colors.TextPrimary
+    self.SubtitleText.TextScaled = true
+    self.SubtitleText.Font = Enum.Font.GothamBlack
+    self.SubtitleText.TextStrokeTransparency = 0.7
+    self.SubtitleText.TextStrokeColor3 = Colors.PinkDark
+    self.SubtitleText.ZIndex = 1002
+    self.SubtitleText.Parent = self.TitleContainer
+
+    self.SubtitleGradient = Instance.new("UIGradient")
+    self.SubtitleGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Colors.PinkDark),
+        ColorSequenceKeypoint.new(0.5, Colors.PinkMedium),
+        ColorSequenceKeypoint.new(1, Colors.PinkLight)
+    }
+    self.SubtitleGradient.Rotation = -45
+    self.SubtitleGradient.Parent = self.SubtitleText
+
+    -- Tab System
+    self.TabArea = Instance.new("Frame")
+    self.TabArea.Size = UDim2.new(1, -40, 0, 40)
+    self.TabArea.Position = UDim2.new(0, 20, 0, 80)
+    self.TabArea.BackgroundTransparency = 1
+    self.TabArea.ZIndex = 1001
+    self.TabArea.Parent = self.MainContainer
+
+    local TabListLayout = Instance.new("UIListLayout")
+    TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+    TabListLayout.Padding = UDim.new(0, 5)
+    TabListLayout.Parent = self.TabArea
+
+    -- Content Area
+    self.ContentArea = Instance.new("Frame")
+    self.ContentArea.Size = UDim2.new(1, -40, 1, -140)
+    self.ContentArea.Position = UDim2.new(0, 20, 0, 130)
+    self.ContentArea.BackgroundTransparency = 1
+    self.ContentArea.ZIndex = 1001
+    self.ContentArea.Parent = self.MainContainer
+
+    -- Tab Content Container
+    self.TabContent = Instance.new("Frame")
+    self.TabContent.Size = UDim2.new(1, 0, 1, 0)
+    self.TabContent.BackgroundTransparency = 1
+    self.TabContent.ZIndex = 1001
+    self.TabContent.Parent = self.ContentArea
+
+    -- Mobile Reopen Button
+    self.ReopenButton = Instance.new("ImageButton")
+    self.ReopenButton.Name = "ReopenButton"
+    self.ReopenButton.Size = UDim2.new(0, 60, 0, 60)
+    self.ReopenButton.Position = UDim2.new(0, 20, 0, 20)
+    self.ReopenButton.BackgroundColor3 = Colors.Primary
+    self.ReopenButton.BorderSizePixel = 0
+    self.ReopenButton.Image = "rbxassetid://75247573479445"
+    self.ReopenButton.ImageColor3 = Colors.PinkLight
+    self.ReopenButton.ScaleType = Enum.ScaleType.Fit
+    self.ReopenButton.Visible = false
+    self.ReopenButton.ZIndex = 1010
+    self.ReopenButton.Parent = self.ScreenGui
+
+    local ReopenCorner = Instance.new("UICorner")
+    ReopenCorner.CornerRadius = UDim.new(0, 15)
+    ReopenCorner.Parent = self.ReopenButton
+
+    local ReopenStroke = Instance.new("UIStroke")
+    ReopenStroke.Color = Colors.PinkLight
+    ReopenStroke.Thickness = 2
+    ReopenStroke.Transparency = 0.3
+    ReopenStroke.Parent = self.ReopenButton
+
+    -- Animation System
+    self.Animations = {
+        BorderTween = nil,
+        ReopenGlowTween = nil
+    }
+
+    -- Tab Management
+    self.Tabs = {}
+    self.ActiveTab = nil
+
+    -- Initialize
+    self:SetupAnimations()
+    self:SetupInteractions()
+    self:SetupDraggable()
+    StartParticleSystem(self.ParticleContainer)
+
+    return self
+end
+
+function NexusGUI:SetupAnimations()
+    -- Border Animation
+    self.Animations.BorderTween = TweenService:Create(self.AnimatedBorder.UIStroke.UIGradient, 
         TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
         {Rotation = 360})
-    self.borderTween:Play()
-end
+    self.Animations.BorderTween:Play()
 
-function NexusUI:CreateContentArea()
-    self.content = Instance.new("Frame")
-    self.content.Name = "Content"
-    self.content.Size = UDim2.new(1, -40, 0, 280)
-    self.content.Position = UDim2.new(0, 20, 0, 140)
-    self.content.BackgroundTransparency = 1
-    self.content.ZIndex = 1001
-    self.content.Parent = self.mainContainer
-end
-
-function NexusUI:CreateReopenButton()
-    if not self.options.showReopenButton then return end
+    -- Entrance Animation
+    self.MainContainer.Size = UDim2.new(0, 0, 0, 0)
+    self.MainContainer.BackgroundTransparency = 1
     
-    self.reopenButton = Instance.new("ImageButton")
-    self.reopenButton.Name = "ReopenButton"
-    self.reopenButton.Size = UDim2.new(0, 30, 0, 30)
-    self.reopenButton.Position = UDim2.new(0, 20, 0, 20)
-    self.reopenButton.BackgroundColor3 = NexusUI.Colors.Primary
-    self.reopenButton.BorderSizePixel = 0
-    self.reopenButton.Image = "rbxassetid://75247573479445"
-    self.reopenButton.ImageColor3 = NexusUI.Colors.PinkLight
-    self.reopenButton.ScaleType = Enum.ScaleType.Fit
-    self.reopenButton.Visible = false
-    self.reopenButton.ZIndex = 1010
-    self.reopenButton.Parent = self.screenGui
-
-    local reopenCorner = Instance.new("UICorner")
-    reopenCorner.CornerRadius = UDim.new(0, 15)
-    reopenCorner.Parent = self.reopenButton
-
-    local reopenStroke = Instance.new("UIStroke")
-    reopenStroke.Color = NexusUI.Colors.PinkLight
-    reopenStroke.Thickness = 2
-    reopenStroke.Transparency = 0.3
-    reopenStroke.Parent = self.reopenButton
-
-    local reopenGlow = Instance.new("Frame")
-    reopenGlow.Size = UDim2.new(1, 10, 1, 10)
-    reopenGlow.Position = UDim2.new(0, -5, 0, -5)
-    reopenGlow.BackgroundTransparency = 1
-    reopenGlow.ZIndex = 1009
-    reopenGlow.Parent = self.reopenButton
-
-    local reopenGlowCorner = Instance.new("UICorner")
-    reopenGlowCorner.CornerRadius = UDim.new(0, 18)
-    reopenGlowCorner.Parent = reopenGlow
-
-    local reopenGlowStroke = Instance.new("UIStroke")
-    reopenGlowStroke.Color = NexusUI.Colors.PinkLight
-    reopenGlowStroke.Thickness = 2
-    reopenGlowStroke.Transparency = 0.2
-    reopenGlowStroke.Parent = reopenGlow
-
-    local reopenGlowGradient = Instance.new("UIGradient")
-    reopenGlowGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkLight),
-        ColorSequenceKeypoint.new(0.5, NexusUI.Colors.PinkMedium),
-        ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkLight)
-    }
-    reopenGlowGradient.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 0.8),
-        NumberSequenceKeypoint.new(0.2, 0.05),
-        NumberSequenceKeypoint.new(0.8, 0.05),
-        NumberSequenceKeypoint.new(1, 0.8)
-    }
-    reopenGlowGradient.Parent = reopenGlowStroke
-
-    -- Start reopen animation
-    self.reopenGlowTween = TweenService:Create(reopenGlowGradient, 
-        TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
-        {Rotation = 360})
-    self.reopenGlowTween:Play()
-
-    -- Reopen button functionality
-    self.reopenButton.MouseButton1Click:Connect(function()
-        self:Show()
-    end)
-
-    self:SetupReopenButtonHover()
-    self:SetupReopenDragging()
+    TweenService:Create(self.MainContainer, 
+        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+        {Size = UDim2.new(0, 550, 0, 600), BackgroundTransparency = 0}):Play()
 end
 
-function NexusUI:SetupDragging()
-    local dragging, dragInput, dragStart, startPos
+function NexusGUI:SetupInteractions()
+    -- Hide/Show functionality
+    self.ReopenButton.MouseButton1Click:Connect(function() self:ShowGUI() end)
 
-    self.header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = self.mainContainer.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-
-    self.header.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then 
-            dragInput = input 
-        end
-    end)
-
-    table.insert(self.connections, UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            local delta = input.Position - dragStart
-            self.mainContainer.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end))
-end
-
-function NexusUI:SetupReopenDragging()
-    if not self.reopenButton then return end
-    
-    local dragging, dragInput, dragStart, startPos
-
-    self.reopenButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = self.reopenButton.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-
-    self.reopenButton.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then 
-            dragInput = input 
-        end
-    end)
-
-    table.insert(self.connections, UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            local delta = input.Position - dragStart
-            self.reopenButton.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end))
-end
-
-function NexusUI:SetupKeybinds()
-    table.insert(self.connections, UserInputService.InputBegan:Connect(function(input, gp)
-        if input.KeyCode == self.options.keybind then
-            if self.isVisible then
-                self:Hide()
+    -- Keybind to hide/show
+    UserInputService.InputBegan:Connect(function(input, gp)
+        if input.KeyCode == Enum.KeyCode.RightShift then
+            if self.MainContainer.Visible then
+                self:HideGUI()
             else
-                self:Show()
+                self:ShowGUI()
             end
         end
-    end))
+    end)
 end
 
-function NexusUI:PlayEntranceAnimation()
-    self.mainContainer.Size = UDim2.new(0, 0, 0, 0)
-    self.mainContainer.BackgroundTransparency = 1
-    
-    TweenService:Create(self.mainContainer, 
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
-        {Size = self.options.size, BackgroundTransparency = 0}):Play()
+function NexusGUI:SetupDraggable()
+    local dragging, dragInput, dragStart, startPos
+
+    self.Header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = self.MainContainer.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+
+    self.ReopenButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = self.ReopenButton.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+
+    self.Header.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then 
+            dragInput = input 
+        end
+    end)
+
+    self.ReopenButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then 
+            dragInput = input 
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
+            if startPos == self.MainContainer.Position then
+                self.MainContainer.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            else
+                self.ReopenButton.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
+        end
+    end)
 end
 
 -- ========================================
--- PUBLIC METHODS
+-- TAB SYSTEM IMPLEMENTATION
 -- ========================================
-function NexusUI:CreateSection(options)
-    local section = Instance.new("Frame")
-    section.Size = options.size or UDim2.new(1, 0, 0, 80)
-    section.Position = options.position or UDim2.new(0, 0, 0, 0)
-    section.BackgroundTransparency = 1
-    section.ZIndex = 1001
-    section.Parent = self.content
+function NexusGUI:AddTab(tabName)
+    local tab = {
+        Name = tabName,
+        Container = nil,
+        Buttons = {},
+        Elements = {}
+    }
+
+    -- Create Tab Button
+    local tabButton = Instance.new("TextButton")
+    tabButton.Name = tabName .. "Tab"
+    tabButton.Size = UDim2.new(0, 100, 1, 0)
+    tabButton.BackgroundColor3 = Colors.Secondary
+    tabButton.BorderSizePixel = 0
+    tabButton.Text = tabName
+    tabButton.TextColor3 = Colors.TextSecondary
+    tabButton.TextSize = 14
+    tabButton.Font = Enum.Font.GothamMedium
+    tabButton.AutoButtonColor = false
+    tabButton.ZIndex = 1002
+    tabButton.Parent = self.TabArea
+
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.CornerRadius = UDim.new(0, 8)
+    tabCorner.Parent = tabButton
+
+    local tabGradient = Instance.new("UIGradient")
+    tabGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Colors.Secondary),
+        ColorSequenceKeypoint.new(1, Colors.Primary)
+    }
+    tabGradient.Rotation = 90
+    tabGradient.Parent = tabButton
+
+    -- Create Tab Content
+    local tabContent = Instance.new("ScrollingFrame")
+    tabContent.Name = tabName .. "Content"
+    tabContent.Size = UDim2.new(1, 0, 1, 0)
+    tabContent.BackgroundTransparency = 1
+    tabContent.BorderSizePixel = 0
+    tabContent.ScrollBarThickness = 4
+    tabContent.ScrollBarImageColor3 = Colors.PinkMedium
+    tabContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    tabContent.ZIndex = 1001
+    tabContent.Visible = false
+    tabContent.Parent = self.TabContent
+
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.Padding = UDim.new(0, 10)
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Parent = tabContent
+
+    local contentPadding = Instance.new("UIPadding")
+    contentPadding.PaddingTop = UDim.new(0, 10)
+    contentPadding.PaddingLeft = UDim.new(0, 10)
+    contentPadding.PaddingRight = UDim.new(0, 10)
+    contentPadding.Parent = tabContent
+
+    tab.Container = tabContent
+    tab.Button = tabButton
+
+    -- Tab Button Interactions
+    tabButton.MouseEnter:Connect(function()
+        if self.ActiveTab ~= tab then
+            TweenService:Create(tabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = Colors.HoverPrimary
+            }):Play()
+        end
+    end)
+
+    tabButton.MouseLeave:Connect(function()
+        if self.ActiveTab ~= tab then
+            TweenService:Create(tabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = Colors.Secondary
+            }):Play()
+        end
+    end)
+
+    tabButton.MouseButton1Click:Connect(function()
+        self:SwitchTab(tab)
+    end)
+
+    -- Add to tabs list
+    table.insert(self.Tabs, tab)
+
+    -- Set as active if first tab
+    if #self.Tabs == 1 then
+        self:SwitchTab(tab)
+    end
+
+    return tab
+end
+
+function NexusGUI:SwitchTab(tab)
+    -- Hide all tabs
+    for _, otherTab in ipairs(self.Tabs) do
+        otherTab.Container.Visible = false
+        TweenService:Create(otherTab.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+            BackgroundColor3 = Colors.Secondary,
+            TextColor3 = Colors.TextSecondary
+        }):Play()
+    end
+
+    -- Show selected tab
+    tab.Container.Visible = true
+    TweenService:Create(tab.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+        BackgroundColor3 = Colors.PinkMedium,
+        TextColor3 = Colors.TextPrimary
+    }):Play()
+
+    self.ActiveTab = tab
+end
+
+-- ========================================
+-- UI ELEMENT CREATION METHODS
+-- ========================================
+function NexusGUI:AddSection(tab, sectionName)
+    local section = {}
+
+    local sectionFrame = Instance.new("Frame")
+    sectionFrame.Name = sectionName .. "Section"
+    sectionFrame.Size = UDim2.new(1, -20, 0, 0)
+    sectionFrame.BackgroundColor3 = Colors.Primary
+    sectionFrame.BorderSizePixel = 0
+    sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
+    sectionFrame.ZIndex = 1002
+    sectionFrame.Parent = tab.Container
+
+    local sectionCorner = Instance.new("UICorner")
+    sectionCorner.CornerRadius = UDim.new(0, 12)
+    sectionCorner.Parent = sectionFrame
+
+    local sectionStroke = Instance.new("UIStroke")
+    sectionStroke.Color = Colors.Border
+    sectionStroke.Thickness = 1
+    sectionStroke.Parent = sectionFrame
+
+    local sectionHeader = Instance.new("TextLabel")
+    sectionHeader.Size = UDim2.new(1, -20, 0, 30)
+    sectionHeader.Position = UDim2.new(0, 10, 0, 5)
+    sectionHeader.BackgroundTransparency = 1
+    sectionHeader.Text = sectionName
+    sectionHeader.TextColor3 = Colors.TextPrimary
+    sectionHeader.TextSize = 16
+    sectionHeader.Font = Enum.Font.GothamBold
+    sectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+    sectionHeader.ZIndex = 1003
+    sectionHeader.Parent = sectionFrame
+
+    local contentContainer = Instance.new("Frame")
+    contentContainer.Size = UDim2.new(1, -20, 0, 0)
+    contentContainer.Position = UDim2.new(0, 10, 0, 40)
+    contentContainer.BackgroundTransparency = 1
+    contentContainer.AutomaticSize = Enum.AutomaticSize.Y
+    contentContainer.ZIndex = 1002
+    contentContainer.Parent = sectionFrame
+
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.Padding = UDim.new(0, 8)
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Parent = contentContainer
+
+    section.Container = contentContainer
+    section.Frame = sectionFrame
+
+    function section:AddLabel(text, doesWrap)
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 0, doesWrap and 0 or 20)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextColor3 = Colors.TextPrimary
+        label.TextSize = 14
+        label.Font = Enum.Font.Gotham
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextWrapped = doesWrap or false
+        label.AutomaticSize = doesWrap and Enum.AutomaticSize.Y or Enum.AutomaticSize.None
+        label.ZIndex = 1003
+        label.Parent = section.Container
+
+        return label
+    end
+
+    function section:AddButton(buttonText, callback)
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, 0, 0, 35)
+        button.BackgroundColor3 = Colors.Secondary
+        button.BorderSizePixel = 0
+        button.Text = buttonText
+        button.TextColor3 = Colors.TextPrimary
+        button.TextSize = 14
+        button.Font = Enum.Font.GothamMedium
+        button.AutoButtonColor = false
+        button.ZIndex = 1003
+        button.Parent = section.Container
+
+        local buttonCorner = Instance.new("UICorner")
+        buttonCorner.CornerRadius = UDim.new(0, 8)
+        buttonCorner.Parent = button
+
+        local buttonGradient = Instance.new("UIGradient")
+        buttonGradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Colors.Secondary),
+            ColorSequenceKeypoint.new(1, Colors.Primary)
+        }
+        buttonGradient.Rotation = 90
+        buttonGradient.Parent = button
+
+        -- Hover effects
+        button.MouseEnter:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = Colors.HoverPrimary
+            }):Play()
+        end)
+
+        button.MouseLeave:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = Colors.Secondary
+            }):Play()
+        end)
+
+        button.MouseButton1Click:Connect(function()
+            if callback then
+                callback()
+            end
+        end)
+
+        return button
+    end
+
+    function section:AddToggle(toggleText, defaultValue, callback)
+        local toggle = {
+            Value = defaultValue or false,
+            Callback = callback
+        }
+
+        local toggleFrame = Instance.new("Frame")
+        toggleFrame.Size = UDim2.new(1, 0, 0, 25)
+        toggleFrame.BackgroundTransparency = 1
+        toggleFrame.ZIndex = 1003
+        toggleFrame.Parent = section.Container
+
+        local toggleButton = Instance.new("TextButton")
+        toggleButton.Size = UDim2.new(0, 20, 0, 20)
+        toggleButton.Position = UDim2.new(0, 0, 0, 2)
+        toggleButton.BackgroundColor3 = defaultValue and Colors.PinkMedium or Colors.Secondary
+        toggleButton.BorderSizePixel = 0
+        toggleButton.Text = ""
+        toggleButton.AutoButtonColor = false
+        toggleButton.ZIndex = 1004
+        toggleButton.Parent = toggleFrame
+
+        local toggleCorner = Instance.new("UICorner")
+        toggleCorner.CornerRadius = UDim.new(0, 4)
+        toggleCorner.Parent = toggleButton
+
+        local toggleLabel = Instance.new("TextLabel")
+        toggleLabel.Size = UDim2.new(1, -25, 1, 0)
+        toggleLabel.Position = UDim2.new(0, 25, 0, 0)
+        toggleLabel.BackgroundTransparency = 1
+        toggleLabel.Text = toggleText
+        toggleLabel.TextColor3 = Colors.TextPrimary
+        toggleLabel.TextSize = 14
+        toggleLabel.Font = Enum.Font.Gotham
+        toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        toggleLabel.ZIndex = 1004
+        toggleLabel.Parent = toggleFrame
+
+        function toggle:SetValue(value)
+            toggle.Value = value
+            TweenService:Create(toggleButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = value and Colors.PinkMedium or Colors.Secondary
+            }):Play()
+            
+            if toggle.Callback then
+                toggle.Callback(value)
+            end
+        end
+
+        toggleButton.MouseButton1Click:Connect(function()
+            toggle:SetValue(not toggle.Value)
+        end)
+
+        return toggle
+    end
+
+    function section:AddSlider(sliderText, minValue, maxValue, defaultValue, callback)
+        local slider = {
+            Value = defaultValue or minValue,
+            Min = minValue,
+            Max = maxValue,
+            Callback = callback
+        }
+
+        local sliderFrame = Instance.new("Frame")
+        sliderFrame.Size = UDim2.new(1, 0, 0, 50)
+        sliderFrame.BackgroundTransparency = 1
+        sliderFrame.ZIndex = 1003
+        sliderFrame.Parent = section.Container
+
+        local sliderLabel = Instance.new("TextLabel")
+        sliderLabel.Size = UDim2.new(1, 0, 0, 20)
+        sliderLabel.BackgroundTransparency = 1
+        sliderLabel.Text = sliderText
+        sliderLabel.TextColor3 = Colors.TextPrimary
+        sliderLabel.TextSize = 14
+        sliderLabel.Font = Enum.Font.Gotham
+        sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+        sliderLabel.ZIndex = 1004
+        sliderLabel.Parent = sliderFrame
+
+        local valueLabel = Instance.new("TextLabel")
+        valueLabel.Size = UDim2.new(0, 60, 0, 20)
+        valueLabel.Position = UDim2.new(1, -60, 0, 0)
+        valueLabel.BackgroundTransparency = 1
+        valueLabel.Text = tostring(defaultValue or minValue)
+        valueLabel.TextColor3 = Colors.TextSecondary
+        valueLabel.TextSize = 12
+        valueLabel.Font = Enum.Font.Gotham
+        valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+        valueLabel.ZIndex = 1004
+        valueLabel.Parent = sliderFrame
+
+        local trackFrame = Instance.new("Frame")
+        trackFrame.Size = UDim2.new(1, 0, 0, 6)
+        trackFrame.Position = UDim2.new(0, 0, 0, 25)
+        trackFrame.BackgroundColor3 = Colors.Secondary
+        trackFrame.BorderSizePixel = 0
+        trackFrame.ZIndex = 1004
+        trackFrame.Parent = sliderFrame
+
+        local trackCorner = Instance.new("UICorner")
+        trackCorner.CornerRadius = UDim.new(1, 0)
+        trackCorner.Parent = trackFrame
+
+        local fillFrame = Instance.new("Frame")
+        fillFrame.Size = UDim2.new((defaultValue - minValue) / (maxValue - minValue), 0, 1, 0)
+        fillFrame.BackgroundColor3 = Colors.PinkMedium
+        fillFrame.BorderSizePixel = 0
+        fillFrame.ZIndex = 1005
+        fillFrame.Parent = trackFrame
+
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(1, 0)
+        fillCorner.Parent = fillFrame
+
+        local handle = Instance.new("Frame")
+        handle.Size = UDim2.new(0, 12, 0, 12)
+        handle.Position = UDim2.new((defaultValue - minValue) / (maxValue - minValue), -6, 0.5, -6)
+        handle.BackgroundColor3 = Colors.PinkLight
+        handle.BorderSizePixel = 0
+        handle.ZIndex = 1006
+        handle.Parent = trackFrame
+
+        local handleCorner = Instance.new("UICorner")
+        handleCorner.CornerRadius = UDim.new(1, 0)
+        handleCorner.Parent = handle
+
+        local isDragging = false
+
+        local function updateSlider(value)
+            local normalized = math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
+            fillFrame.Size = UDim2.new(normalized, 0, 1, 0)
+            handle.Position = UDim2.new(normalized, -6, 0.5, -6)
+            valueLabel.Text = tostring(math.floor(value))
+            slider.Value = value
+            
+            if slider.Callback then
+                slider.Callback(value)
+            end
+        end
+
+        trackFrame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                isDragging = true
+                
+                local mousePos = input.Position.X
+                local trackPos = trackFrame.AbsolutePosition.X
+                local trackSize = trackFrame.AbsoluteSize.X
+                
+                local normalized = math.clamp((mousePos - trackPos) / trackSize, 0, 1)
+                local value = minValue + normalized * (maxValue - minValue)
+                updateSlider(value)
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local mousePos = input.Position.X
+                local trackPos = trackFrame.AbsolutePosition.X
+                local trackSize = trackFrame.AbsoluteSize.X
+                
+                local normalized = math.clamp((mousePos - trackPos) / trackSize, 0, 1)
+                local value = minValue + normalized * (maxValue - minValue)
+                updateSlider(value)
+            end
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                isDragging = false
+            end
+        end)
+
+        function slider:SetValue(value)
+            updateSlider(math.clamp(value, minValue, maxValue))
+        end
+
+        return slider
+    end
+
+    function section:AddDropdown(dropdownText, options, defaultValue, callback)
+        local dropdown = {
+            Value = defaultValue or options[1],
+            Options = options,
+            Callback = callback,
+            IsOpen = false
+        }
+
+        local dropdownFrame = Instance.new("Frame")
+        dropdownFrame.Size = UDim2.new(1, 0, 0, 35)
+        dropdownFrame.BackgroundTransparency = 1
+        dropdownFrame.ZIndex = 1003
+        dropdownFrame.Parent = section.Container
+
+        local dropdownButton = Instance.new("TextButton")
+        dropdownButton.Size = UDim2.new(1, 0, 1, 0)
+        dropdownButton.BackgroundColor3 = Colors.Secondary
+        dropdownButton.BorderSizePixel = 0
+        dropdownButton.Text = dropdownText .. ": " .. (defaultValue or options[1])
+        dropdownButton.TextColor3 = Colors.TextPrimary
+        dropdownButton.TextSize = 14
+        dropdownButton.Font = Enum.Font.Gotham
+        dropdownButton.AutoButtonColor = false
+        dropdownButton.ZIndex = 1004
+        dropdownButton.Parent = dropdownFrame
+
+        local dropdownCorner = Instance.new("UICorner")
+        dropdownCorner.CornerRadius = UDim.new(0, 8)
+        dropdownCorner.Parent = dropdownButton
+
+        local dropdownList = Instance.new("ScrollingFrame")
+        dropdownList.Size = UDim2.new(1, 0, 0, 0)
+        dropdownList.Position = UDim2.new(0, 0, 1, 5)
+        dropdownList.BackgroundColor3 = Colors.Primary
+        dropdownList.BorderSizePixel = 0
+        dropdownList.ScrollBarThickness = 4
+        dropdownList.ScrollBarImageColor3 = Colors.PinkMedium
+        dropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        dropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
+        dropdownList.Visible = false
+        dropdownList.ZIndex = 1010
+        dropdownList.Parent = dropdownFrame
+
+        local listLayout = Instance.new("UIListLayout")
+        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        listLayout.Parent = dropdownList
+
+        local listCorner = Instance.new("UICorner")
+        listCorner.CornerRadius = UDim.new(0, 8)
+        listCorner.Parent = dropdownList
+
+        -- Create option buttons
+        for i, option in ipairs(options) do
+            local optionButton = Instance.new("TextButton")
+            optionButton.Size = UDim2.new(1, 0, 0, 30)
+            optionButton.BackgroundColor3 = Colors.Primary
+            optionButton.BorderSizePixel = 0
+            optionButton.Text = option
+            optionButton.TextColor3 = Colors.TextPrimary
+            optionButton.TextSize = 14
+            optionButton.Font = Enum.Font.Gotham
+            optionButton.AutoButtonColor = false
+            optionButton.ZIndex = 1011
+            optionButton.Parent = dropdownList
+
+            optionButton.MouseEnter:Connect(function()
+                TweenService:Create(optionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                    BackgroundColor3 = Colors.HoverPrimary
+                }):Play()
+            end)
+
+            optionButton.MouseLeave:Connect(function()
+                TweenService:Create(optionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                    BackgroundColor3 = Colors.Primary
+                }):Play()
+            end)
+
+            optionButton.MouseButton1Click:Connect(function()
+                dropdown.Value = option
+                dropdownButton.Text = dropdownText .. ": " .. option
+                dropdown:Close()
+                
+                if dropdown.Callback then
+                    dropdown.Callback(option)
+                end
+            end)
+        end
+
+        function dropdown:Open()
+            dropdown.IsOpen = true
+            dropdownList.Visible = true
+            TweenService:Create(dropdownList, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = UDim2.new(1, 0, 0, math.min(#options * 30, 150))
+            }):Play()
+        end
+
+        function dropdown:Close()
+            dropdown.IsOpen = false
+            TweenService:Create(dropdownList, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = UDim2.new(1, 0, 0, 0)
+            }):Play()
+            task.wait(0.2)
+            dropdownList.Visible = false
+        end
+
+        function dropdown:Toggle()
+            if dropdown.IsOpen then
+                dropdown:Close()
+            else
+                dropdown:Open()
+            end
+        end
+
+        dropdownButton.MouseButton1Click:Connect(function()
+            dropdown:Toggle()
+        end)
+
+        -- Close dropdown when clicking outside
+        UserInputService.InputBegan:Connect(function(input)
+            if dropdown.IsOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
+                local mousePos = input.Position
+                local absPos = dropdownFrame.AbsolutePosition
+                local absSize = dropdownFrame.AbsoluteSize
+                
+                if not (mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X and
+                       mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y + dropdownList.AbsoluteSize.Y) then
+                    dropdown:Close()
+                end
+            end
+        end)
+
+        return dropdown
+    end
 
     return section
 end
 
-function NexusUI:CreateButton(options)
-    local button = Instance.new("TextButton")
-    button.Size = options.size or UDim2.new(1, 0, 0, 50)
-    button.Position = options.position or UDim2.new(0, 0, 0, 0)
-    button.BackgroundColor3 = options.backgroundColor or NexusUI.Colors.Primary
-    button.BorderSizePixel = 0
-    button.Text = options.text or "BUTTON"
-    button.TextColor3 = options.textColor or NexusUI.Colors.TextPrimary
-    button.TextSize = options.textSize or 16
-    button.Font = options.font or Enum.Font.GothamBold
-    button.AutoButtonColor = false
-    button.ZIndex = 1002
-    button.Parent = options.parent or self.content
+function NexusGUI:HideGUI()
+    self.MainContainer.Visible = false
+    self.ReopenButton.Visible = true
+    
+    self.ReopenButton.Size = UDim2.new(0, 0, 0, 0)
+    TweenService:Create(self.ReopenButton, 
+        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+        {Size = UDim2.new(0, 70, 0, 70)}):Play()
+end
 
+function NexusGUI:ShowGUI()
+    self.ReopenButton.Visible = false
+    self.MainContainer.Visible = true
+    
+    self.MainContainer.Size = UDim2.new(0, 0, 0, 0)
+    TweenService:Create(self.MainContainer, 
+        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+        {Size = UDim2.new(0, 550, 0, 600)}):Play()
+end
+
+function NexusGUI:CreateNotification(title, message, color, duration)
+    local notif = Instance.new("Frame")
+    notif.Size = UDim2.new(0, 300, 0, 80)
+    notif.Position = UDim2.new(1, 10, 0, 10)
+    notif.BackgroundColor3 = Colors.Surface
+    notif.BorderSizePixel = 0
+    notif.ZIndex = 2000
+    notif.Parent = self.ScreenGui
+    
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = button
-
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = options.gradient or ColorSequence.new{
-        ColorSequenceKeypoint.new(0, NexusUI.Colors.PinkDark),
-        ColorSequenceKeypoint.new(1, NexusUI.Colors.PinkMedium)
-    }
-    gradient.Rotation = 90
-    gradient.Parent = button
-
-    -- Hover effects
-    local originalColor = button.BackgroundColor3
-    local hoverColor = options.hoverColor or NexusUI.Colors.HoverPrimary
-
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = hoverColor
-        }):Play()
-    end)
+    corner.Parent = notif
     
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = originalColor
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color
+    stroke.Thickness = 2
+    stroke.Parent = notif
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -20, 0, 25)
+    titleLabel.Position = UDim2.new(0, 10, 0, 10)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = color
+    titleLabel.TextSize = 16
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 2001
+    titleLabel.Parent = notif
+    
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, -20, 1, -40)
+    messageLabel.Position = UDim2.new(0, 10, 0, 35)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Text = message
+    messageLabel.TextColor3 = Colors.TextPrimary
+    messageLabel.TextSize = 14
+    messageLabel.Font = Enum.Font.Gotham
+    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+    messageLabel.TextYAlignment = Enum.TextYAlignment.Top
+    messageLabel.TextWrapped = true
+    messageLabel.ZIndex = 2001
+    messageLabel.Parent = notif
+    
+    -- Entrance animation
+    notif.Position = UDim2.new(1, 10, 0, 10)
+    TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -310, 0, 10)
+    }):Play()
+    
+    -- Auto remove
+    task.spawn(function()
+        task.wait(duration or 5)
+        TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 10, 0, 10)
         }):Play()
+        task.wait(0.3)
+        notif:Destroy()
     end)
-
-    -- Click event
-    if options.callback then
-        button.MouseButton1Click:Connect(options.callback)
-    end
-
-    return button
 end
 
-function NexusUI:CreateLabel(options)
-    local label = Instance.new("TextLabel")
-    label.Size = options.size or UDim2.new(1, 0, 0, 30)
-    label.Position = options.position or UDim2.new(0, 0, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = options.text or "LABEL"
-    label.TextColor3 = options.textColor or NexusUI.Colors.TextPrimary
-    label.TextSize = options.textSize or 16
-    label.Font = options.font or Enum.Font.Gotham
-    label.TextXAlignment = options.xAlignment or Enum.TextXAlignment.Center
-    label.ZIndex = 1002
-    label.Parent = options.parent or self.content
-
-    return label
-end
-
-function NexusUI:CreateToggle(options)
-    local toggle = {
-        value = options.default or false,
-        callback = options.callback
-    }
-
-    local button = self:CreateButton({
-        text = options.text or "TOGGLE: OFF",
-        size = options.size or UDim2.new(1, 0, 0, 40),
-        position = options.position,
-        parent = options.parent,
-        callback = function()
-            toggle.value = not toggle.value
-            toggle:Update()
-            if toggle.callback then
-                toggle.callback(toggle.value)
-            end
-        end
-    })
-
-    function toggle:Update()
-        if self.value then
-            button.Text = options.text:gsub(": OFF", ": ON") or "TOGGLE: ON"
-            button.BackgroundColor3 = NexusUI.Colors.Success
-        else
-            button.Text = options.text:gsub(": ON", ": OFF") or "TOGGLE: OFF"
-            button.BackgroundColor3 = NexusUI.Colors.Primary
+function NexusGUI:Destroy()
+    ParticleState.IsDestroyed = true
+    for _, particle in ipairs(ParticleState.Particles) do
+        if particle.frame then
+            particle.frame:Destroy()
         end
     end
-
-    toggle:Update()
-    return toggle
-end
-
-function NexusUI:Hide()
-    self.isVisible = false
-    self.mainContainer.Visible = false
-    if self.reopenButton then
-        self.reopenButton.Visible = true
-        self.reopenButton.Size = UDim2.new(0, 0, 0, 0)
-        TweenService:Create(self.reopenButton, 
-            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
-            {Size = UDim2.new(0, 70, 0, 70)}):Play()
-    end
-end
-
-function NexusUI:Show()
-    self.isVisible = true
-    if self.reopenButton then
-        self.reopenButton.Visible = false
-    end
-    self.mainContainer.Visible = true
+    ParticleState.Particles = {}
     
-    self.mainContainer.Size = UDim2.new(0, 0, 0, 0)
-    TweenService:Create(self.mainContainer, 
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
-        {Size = self.options.size}):Play()
-end
-
-function NexusUI:Destroy()
-    -- Disconnect all connections
-    for _, connection in ipairs(self.connections) do
-        connection:Disconnect()
-    end
-
-    -- Stop particle system
-    if self.particleSystem then
-        self.particleSystem:Destroy()
-    end
-
-    -- Stop tweens
-    if self.borderTween then
-        self.borderTween:Cancel()
-    end
-    if self.reopenGlowTween then
-        self.reopenGlowTween:Cancel()
-    end
-
-    -- Destroy GUI
-    if self.screenGui then
-        self.screenGui:Destroy()
+    if self.ScreenGui then
+        self.ScreenGui:Destroy()
     end
 end
 
-function NexusUI:SetupReopenButtonHover()
-    if not self.reopenButton then return end
-
-    self.reopenButton.MouseEnter:Connect(function()
-        TweenService:Create(self.reopenButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = NexusUI.Colors.HoverPrimary,
-            ImageColor3 = NexusUI.Colors.PinkBright
-        }):Play()
-    end)
-
-    self.reopenButton.MouseLeave:Connect(function()
-        TweenService:Create(self.reopenButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = NexusUI.Colors.Primary,
-            ImageColor3 = NexusUI.Colors.PinkLight
-        }):Play()
-    end)
-end
-
-return NexusUI
+-- Create and return the GUI
+return NexusGUI:Create()
