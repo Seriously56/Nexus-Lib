@@ -1,1248 +1,1258 @@
-local cloneref = (cloneref or clonereference or function(instance: any) return instance end)
-local InputService = cloneref(game:GetService('UserInputService'))
-local TextService = cloneref(game:GetService('TextService'))
-local CoreGui = cloneref(game:GetService('CoreGui'))
-local Teams = cloneref(game:GetService('Teams'))
-local Players = cloneref(game:GetService('Players'))
-local RunService = cloneref(game:GetService('RunService'))
-local TweenService = cloneref(game:GetService('TweenService'))
-local RenderStepped = RunService.RenderStepped
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+--[[
+    Milenium Library - Fixed Mobile/PC Support
+    -> Made by @finobe 
+    -> Fixed for cross-platform compatibility
+]]
 
--- ========================================
--- MAX MONEY STYLE COLOR SCHEME
--- ========================================
-local Colors = {
-    Background = Color3.fromRGB(15, 8, 15),
-    Surface = Color3.fromRGB(25, 15, 25),
-    Primary = Color3.fromRGB(40, 25, 35),
-    Secondary = Color3.fromRGB(40, 28, 38),
-    Border = Color3.fromRGB(60, 40, 55),
-    TextPrimary = Color3.fromRGB(255, 240, 245),
-    TextSecondary = Color3.fromRGB(200, 170, 185),
-    Success = Color3.fromRGB(100, 255, 150),
-    Error = Color3.fromRGB(255, 100, 130),
-    Warning = Color3.fromRGB(255, 200, 100),
-    Discord = Color3.fromRGB(180, 65, 160),
-    GetKey = Color3.fromRGB(255, 105, 180),
-    HoverPrimary = Color3.fromRGB(50, 35, 45),
-    HoverGetKey = Color3.fromRGB(255, 120, 200),
-    HoverDiscord = Color3.fromRGB(200, 85, 180),
-    
-    -- Gradient colors from Max Money
-    PinkLight = Color3.fromRGB(255, 182, 193),
-    PinkMedium = Color3.fromRGB(255, 105, 180),
-    PinkDark = Color3.fromRGB(255, 20, 147),
-    PinkBright = Color3.fromRGB(255, 130, 190),
-    PinkNeon = Color3.fromRGB(255, 60, 160)
-}
+-- Variables 
+    local uis = game:GetService("UserInputService") 
+    local players = game:GetService("Players") 
+    local ws = game:GetService("Workspace")
+    local rs = game:GetService("ReplicatedStorage")
+    local http_service = game:GetService("HttpService")
+    local gui_service = game:GetService("GuiService")
+    local lighting = game:GetService("Lighting")
+    local run = game:GetService("RunService")
+    local stats = game:GetService("Stats")
+    local coregui = game:GetService("CoreGui")
+    local debris = game:GetService("Debris")
+    local tween_service = game:GetService("TweenService")
+    local sound_service = game:GetService("SoundService")
 
--- ========================================
--- PARTICLE SYSTEM (CONFINED TO GUI)
--- ========================================
-local ParticleState = {
-    Particles = {},
-    IsDestroyed = false,
-    MousePosition = {X = 0, Y = 0},
-    GuiBounds = {MinX = 0, MaxX = 0, MinY = 0, MaxY = 0}
-}
+    local vec2 = Vector2.new
+    local vec3 = Vector3.new
+    local dim2 = UDim2.new
+    local dim = UDim.new 
+    local rect = Rect.new
+    local cfr = CFrame.new
+    local empty_cfr = cfr()
+    local point_object_space = empty_cfr.PointToObjectSpace
+    local angle = CFrame.Angles
+    local dim_offset = UDim2.fromOffset
 
-local function UpdateGuiBounds(container)
-    if not container then return end
-    local absolutePosition = container.AbsolutePosition
-    local absoluteSize = container.AbsoluteSize
-    
-    ParticleState.GuiBounds = {
-        MinX = absolutePosition.X,
-        MaxX = absolutePosition.X + absoluteSize.X,
-        MinY = absolutePosition.Y,
-        MaxY = absolutePosition.Y + absoluteSize.Y
+    local color = Color3.new
+    local rgb = Color3.fromRGB
+    local hex = Color3.fromHex
+    local hsv = Color3.fromHSV
+    local rgbseq = ColorSequence.new
+    local rgbkey = ColorSequenceKeypoint.new
+    local numseq = NumberSequence.new
+    local numkey = NumberSequenceKeypoint.new
+
+    local camera = ws.CurrentCamera
+    local lp = players.LocalPlayer 
+    local mouse = lp:GetMouse() 
+    local gui_offset = gui_service:GetGuiInset().Y
+
+    local max = math.max 
+    local floor = math.floor 
+    local min = math.min 
+    local abs = math.abs 
+    local noise = math.noise
+    local rad = math.rad 
+    local random = math.random 
+    local pow = math.pow 
+    local sin = math.sin 
+    local pi = math.pi 
+    local tan = math.tan 
+    local atan2 = math.atan2 
+    local clamp = math.clamp 
+
+    local insert = table.insert 
+    local find = table.find 
+    local remove = table.remove
+    local concat = table.concat
+-- 
+
+-- Library init
+    getgenv().library = {
+        directory = "milenium",
+        folders = {
+            "/fonts",
+            "/configs",
+        },
+        flags = {},
+        config_flags = {},
+        connections = {},   
+        notifications = {notifs = {}},
+        current_open; 
     }
-end
 
-local function CreateParticle(container)
-    if not container or not container.Parent or ParticleState.IsDestroyed then
-        return nil
-    end
-    
-    local size = math.random(8, 24)
-    local particle = Instance.new('Frame')
-    particle.Size = UDim2.new(0, size, 0, size)
-    
-    -- Start particles within GUI bounds
-    local startX = math.random(0, 100) / 100
-    local startY = math.random(0, 100) / 100
-    particle.Position = UDim2.new(startX, 0, startY, 0)
-    
-    particle.BackgroundColor3 = Colors.PinkLight
-    particle.BackgroundTransparency = math.random(60, 85) / 100
-    particle.BorderSizePixel = 0
-    particle.ZIndex = 5
-    particle.Selectable = false
-    particle.Parent = container
-    
-    local corner = Instance.new('UICorner')
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = particle
-    
-    local gradient = Instance.new('UIGradient')
-    local bubbleColors = {
-        Colors.PinkLight,
-        Colors.PinkMedium,
-        Colors.PinkDark,
-        Color3.fromRGB(255, 150, 200)
-    }
-    local color1 = bubbleColors[math.random(#bubbleColors)]
-    local color2 = bubbleColors[math.random(#bubbleColors)]
-    
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, color1),
-        ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 220, 230)),
-        ColorSequenceKeypoint.new(0.7, color2),
-        ColorSequenceKeypoint.new(1, color1)
-    })
-    gradient.Rotation = math.random(0, 360)
-    gradient.Parent = particle
-    
-    local highlight = Instance.new('Frame')
-    highlight.Size = UDim2.new(0.3, 0, 0.3, 0)
-    highlight.Position = UDim2.new(0.2, 0, 0.15, 0)
-    highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    highlight.BackgroundTransparency = 0.3
-    highlight.BorderSizePixel = 0
-    highlight.ZIndex = particle.ZIndex + 1
-    highlight.Parent = particle
-    
-    local highlightCorner = Instance.new('UICorner')
-    highlightCorner.CornerRadius = UDim.new(1, 0)
-    highlightCorner.Parent = highlight
-    
-    local glow = Instance.new('Frame')
-    glow.Size = UDim2.new(1.8, 0, 1.8, 0)
-    glow.Position = UDim2.new(-0.4, 0, -0.4, 0)
-    glow.BackgroundColor3 = Colors.PinkLight
-    glow.BackgroundTransparency = 0.9
-    glow.BorderSizePixel = 0
-    glow.ZIndex = particle.ZIndex - 1
-    glow.Parent = particle
-    
-    local glowCorner = Instance.new('UICorner')
-    glowCorner.CornerRadius = UDim.new(1, 0)
-    glowCorner.Parent = glow
-    
-    local particleData = {
-        frame = particle,
-        vx = (math.random() - 0.5) * 0.002,
-        vy = (math.random() - 0.5) * 0.002,
-        created = tick(),
-        rotation = 0,
-        rotationSpeed = (math.random() - 0.5) * 2,
-        pulsePhase = math.random() * math.pi * 2,
-        driftPhase = math.random() * math.pi * 2,
-        originalTransparency = particle.BackgroundTransparency,
-        glow = glow,
-        highlight = highlight,
-        lifetime = math.random(30, 60),
-        originalSize = size,
-        wobblePhase = math.random() * math.pi * 2,
-        repelForce = {x = 0, y = 0},
-        mass = size / 10
-    }
-    
-    table.insert(ParticleState.Particles, particleData)
-    return particle
-end
+    -- Device detection
+    local isMobile = uis.TouchEnabled and (not uis.KeyboardEnabled or uis.Platform == Enum.Platform.IOS or uis.Platform == Enum.Platform.Android)
+    local isPC = not isMobile
+    local scale = isMobile and 0.7 or 1
 
-local function UpdateParticles(container)
-    if ParticleState.IsDestroyed or not container then return end
-    
-    -- Update GUI bounds in case of movement
-    UpdateGuiBounds(container)
-    
-    local screenSize = container.AbsoluteSize
-    local mouseScreenX = (ParticleState.MousePosition.X - ParticleState.GuiBounds.MinX) / screenSize.X
-    local mouseScreenY = (ParticleState.MousePosition.Y - ParticleState.GuiBounds.MinY) / screenSize.Y
-    
-    for i = #ParticleState.Particles, 1, -1 do
-        local p = ParticleState.Particles[i]
+    local themes = {
+        preset = {
+            accent = rgb(155, 150, 219),
+        }, 
+
+        utility = {
+            accent = {
+                BackgroundColor3 = {}, 	
+                TextColor3 = {}, 
+                ImageColor3 = {}, 
+                ScrollBarImageColor3 = {} 
+            },
+        }
+    }
+
+    local keys = {
+        [Enum.KeyCode.LeftShift] = "LS",
+        [Enum.KeyCode.RightShift] = "RS",
+        [Enum.KeyCode.LeftControl] = "LC",
+        [Enum.KeyCode.RightControl] = "RC",
+        [Enum.KeyCode.Insert] = "INS",
+        [Enum.KeyCode.Backspace] = "BS",
+        [Enum.KeyCode.Return] = "Ent",
+        [Enum.KeyCode.LeftAlt] = "LA",
+        [Enum.KeyCode.RightAlt] = "RA",
+        [Enum.KeyCode.CapsLock] = "CAPS",
+        [Enum.KeyCode.One] = "1",
+        [Enum.KeyCode.Two] = "2",
+        [Enum.KeyCode.Three] = "3",
+        [Enum.KeyCode.Four] = "4",
+        [Enum.KeyCode.Five] = "5",
+        [Enum.KeyCode.Six] = "6",
+        [Enum.KeyCode.Seven] = "7",
+        [Enum.KeyCode.Eight] = "8",
+        [Enum.KeyCode.Nine] = "9",
+        [Enum.KeyCode.Zero] = "0",
+        [Enum.KeyCode.KeypadOne] = "Num1",
+        [Enum.KeyCode.KeypadTwo] = "Num2",
+        [Enum.KeyCode.KeypadThree] = "Num3",
+        [Enum.KeyCode.KeypadFour] = "Num4",
+        [Enum.KeyCode.KeypadFive] = "Num5",
+        [Enum.KeyCode.KeypadSix] = "Num6",
+        [Enum.KeyCode.KeypadSeven] = "Num7",
+        [Enum.KeyCode.KeypadEight] = "Num8",
+        [Enum.KeyCode.KeypadNine] = "Num9",
+        [Enum.KeyCode.KeypadZero] = "Num0",
+        [Enum.KeyCode.Minus] = "-",
+        [Enum.KeyCode.Equals] = "=",
+        [Enum.KeyCode.Tilde] = "~",
+        [Enum.KeyCode.LeftBracket] = "[",
+        [Enum.KeyCode.RightBracket] = "]",
+        [Enum.KeyCode.RightParenthesis] = ")",
+        [Enum.KeyCode.LeftParenthesis] = "(",
+        [Enum.KeyCode.Semicolon] = ",",
+        [Enum.KeyCode.Quote] = "'",
+        [Enum.KeyCode.BackSlash] = "\\",
+        [Enum.KeyCode.Comma] = ",",
+        [Enum.KeyCode.Period] = ".",
+        [Enum.KeyCode.Slash] = "/",
+        [Enum.KeyCode.Asterisk] = "*",
+        [Enum.KeyCode.Plus] = "+",
+        [Enum.KeyCode.Period] = ".",
+        [Enum.KeyCode.Backquote] = "`",
+        [Enum.UserInputType.MouseButton1] = "MB1",
+        [Enum.UserInputType.MouseButton2] = "MB2",
+        [Enum.UserInputType.MouseButton3] = "MB3",
+        [Enum.KeyCode.Escape] = "ESC",
+        [Enum.KeyCode.Space] = "SPC",
+    }
         
-        if not p or not p.frame or not p.frame.Parent then
-            table.remove(ParticleState.Particles, i)
-        else
-            local currentPos = p.frame.Position
-            local age = tick() - p.created
-            
-            if age > p.lifetime then
-                p.frame:Destroy()
-                table.remove(ParticleState.Particles, i)
-            else
-                local distanceToMouse = math.sqrt(
-                    (currentPos.X.Scale - mouseScreenX)^2 + 
-                    (currentPos.Y.Scale - mouseScreenY)^2
-                )
-                
-                local repelStrength = 0.08
-                local repelRadius = 0.15
-                local repelForceX = 0
-                local repelForceY = 0
-                
-                if distanceToMouse < repelRadius and distanceToMouse > 0 then
-                    local repelPower = (repelRadius - distanceToMouse) / repelRadius
-                    repelPower = repelPower * repelStrength / p.mass
-                    
-                    local directionX = (currentPos.X.Scale - mouseScreenX) / distanceToMouse
-                    local directionY = (currentPos.Y.Scale - mouseScreenY) / distanceToMouse
-                    
-                    repelForceX = directionX * repelPower
-                    repelForceY = directionY * repelPower
-                end
-                
-                p.repelForce.x = p.repelForce.x * 0.85 + repelForceX * 0.15
-                p.repelForce.y = p.repelForce.y * 0.85 + repelForceY * 0.15
-                
-                local newX = currentPos.X.Scale + p.vx + p.repelForce.x
-                local newY = currentPos.Y.Scale + p.vy + p.repelForce.y
-                
-                -- Keep particles within GUI bounds (0 to 1 scale)
-                if newX < 0 then 
-                    newX = 0 
-                    p.vx = math.abs(p.vx) * 0.5
-                elseif newX > 1 then 
-                    newX = 1 
-                    p.vx = -math.abs(p.vx) * 0.5
-                end
-                
-                if newY < 0 then 
-                    newY = 0 
-                    p.vy = math.abs(p.vy) * 0.5
-                elseif newY > 1 then 
-                    newY = 1 
-                    p.vy = -math.abs(p.vy) * 0.5
-                end
-                
-                local wobbleTime = tick() * 1.5 + p.wobblePhase
-                newX = newX + math.sin(wobbleTime) * 0.001
-                newY = newY + math.cos(wobbleTime * 0.7) * 0.001
-                
-                newX = newX + (math.random() - 0.5) * 0.0004
-                newY = newY + (math.random() - 0.5) * 0.0003
-                
-                p.rotation = p.rotation + p.rotationSpeed
-                p.frame.Rotation = p.rotation
-                
-                local breathe = math.sin(tick() * 2.5 + p.pulsePhase) * 0.1 + 1
-                local currentSize = p.originalSize * breathe
-                p.frame.Size = UDim2.new(0, currentSize, 0, currentSize)
-                
-                local transparencyPulse = math.sin(tick() * 3 + p.pulsePhase) * 0.1
-                local newTransparency = math.max(0.5, math.min(0.95, p.originalTransparency + transparencyPulse))
-                p.frame.BackgroundTransparency = newTransparency
-                
-                local glowIntensity = 0.9
-                if distanceToMouse < 0.2 then
-                    glowIntensity = 0.7 + (distanceToMouse / 0.2) * 0.2
-                end
-                p.glow.BackgroundTransparency = glowIntensity
-                
-                local shimmer = math.sin(tick() * 4 + p.pulsePhase) * 0.2 + 0.3
-                p.highlight.BackgroundTransparency = shimmer
-                
-                p.vx = p.vx * 0.995
-                p.vy = p.vy * 0.998
-                
-                p.frame.Position = UDim2.new(newX, 0, newY, 0)
-            end
-        end
-    end
-end
+    library.__index = library
 
-local function StartParticleSystem(container)
-    -- Update initial GUI bounds
-    UpdateGuiBounds(container)
-    
-    -- Mouse tracking for particle interaction (only within GUI)
-    UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mousePos = input.Position
-            -- Only track mouse if it's within GUI bounds
-            if mousePos.X >= ParticleState.GuiBounds.MinX and mousePos.X <= ParticleState.GuiBounds.MaxX and
-               mousePos.Y >= ParticleState.GuiBounds.MinY and mousePos.Y <= ParticleState.GuiBounds.MaxY then
-                ParticleState.MousePosition.X = mousePos.X
-                ParticleState.MousePosition.Y = mousePos.Y
+    for _, path in next, library.folders do 
+        makefolder(library.directory .. path)
+    end
+
+    local flags = library.flags 
+    local config_flags = library.config_flags
+    local notifications = library.notifications 
+
+    local fonts = {}; do
+        function Register_Font(Name, Weight, Style, Asset)
+            if not isfile(Asset.Id) then
+                writefile(Asset.Id, Asset.Font)
             end
-        end
-    end)
-    
-    -- Initial particle creation within GUI
-    task.spawn(function()
-        for i = 1, 20 do
-            if ParticleState.IsDestroyed then break end
-            CreateParticle(container)
-            task.wait(math.random(20, 100) / 1000)
+
+            if isfile(Name .. ".font") then
+                delfile(Name .. ".font")
+            end
+
+            local Data = {
+                name = Name,
+                faces = {
+                    {
+                        name = "Normal",
+                        weight = Weight,
+                        style = Style,
+                        assetId = getcustomasset(Asset.Id),
+                    },
+                },
+            }
+
+            writefile(Name .. ".font", http_service:JSONEncode(Data))
+
+            return getcustomasset(Name .. ".font");
         end
         
-        -- Continuous particle generation
-        while not ParticleState.IsDestroyed and container.Parent do
-            if #ParticleState.Particles < 40 then
-                CreateParticle(container)
-            end
-            task.wait(math.random(400, 1200) / 1000)
+        local Medium = Register_Font("Medium", 200, "Normal", {
+            Id = "Medium.ttf",
+            Font = game:HttpGet("https://raw.githubusercontent.com/your-repo/fonts/main/Inter-Medium.ttf"),
+        })
+
+        local SemiBold = Register_Font("SemiBold", 200, "Normal", {
+            Id = "SemiBold.ttf",
+            Font = game:HttpGet("https://raw.githubusercontent.com/your-repo/fonts/main/Inter-SemiBold.ttf"),
+        })
+
+        fonts = {
+            small = Font.new(Medium, Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+            font = Font.new(SemiBold, Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+        }
+    end
+--
+
+-- Library functions 
+    -- Misc functions
+        function library:tween(obj, properties, easing_style, time) 
+            local tween = tween_service:Create(obj, TweenInfo.new(time or 0.25, easing_style or Enum.EasingStyle.Quint, Enum.EasingDirection.InOut, 0, false, 0), properties):Play()
+            return tween
         end
-    end)
-    
-    -- Particle update loop
-    task.spawn(function()
-        while not ParticleState.IsDestroyed and container.Parent do
-            pcall(function() UpdateParticles(container) end)
-            task.wait(1/60)
-        end
-    end)
-end
 
--- ========================================
--- ENHANCED NEXUS GUI WITH FULL UI LIBRARY FUNCTIONALITY
--- ========================================
-local NexusGUI = {}
-
-function NexusGUI:Create()
-    local self = setmetatable({}, {__index = NexusGUI})
-    
-    -- Create ScreenGui
-    self.ScreenGui = Instance.new("ScreenGui")
-    self.ScreenGui.Name = "NexusPureGUI"
-    self.ScreenGui.Parent = Player:WaitForChild("PlayerGui")
-    self.ScreenGui.ResetOnSpawn = false
-    self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    self.ScreenGui.IgnoreGuiInset = true
-
-    -- Main Container
-    self.MainContainer = Instance.new("Frame")
-    self.MainContainer.Name = "MainContainer"
-    self.MainContainer.Size = UDim2.new(0, 550, 0, 600)
-    self.MainContainer.Position = UDim2.new(0.5, -275, 0.5, -300)
-    self.MainContainer.BackgroundColor3 = Colors.Surface
-    self.MainContainer.BackgroundTransparency = 0
-    self.MainContainer.BorderSizePixel = 0
-    self.MainContainer.ZIndex = 1000
-    self.MainContainer.Parent = self.ScreenGui
-
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 20)
-    Corner.Parent = self.MainContainer
-
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Colors.PinkMedium
-    Stroke.Thickness = 2
-    Stroke.Transparency = 0.2
-    Stroke.Parent = self.MainContainer
-
-    -- Particle Container
-    self.ParticleContainer = Instance.new("Frame")
-    self.ParticleContainer.Size = UDim2.new(1, 0, 1, 0)
-    self.ParticleContainer.BackgroundTransparency = 1
-    self.ParticleContainer.ZIndex = 5
-    self.ParticleContainer.Parent = self.MainContainer
-
-    -- Animated Border
-    self.AnimatedBorder = Instance.new("Frame")
-    self.AnimatedBorder.Name = "AnimatedBorder"
-    self.AnimatedBorder.Size = UDim2.new(1, 8, 1, 8)
-    self.AnimatedBorder.Position = UDim2.new(0, -4, 0, -4)
-    self.AnimatedBorder.BackgroundTransparency = 1
-    self.AnimatedBorder.ZIndex = 999
-    self.AnimatedBorder.Parent = self.MainContainer
-
-    local BorderCorner = Instance.new("UICorner")
-    BorderCorner.CornerRadius = UDim.new(0, 24)
-    BorderCorner.Parent = self.AnimatedBorder
-
-    local BorderStroke = Instance.new("UIStroke")  
-    BorderStroke.Color = Colors.PinkLight
-    BorderStroke.Thickness = 3
-    BorderStroke.Transparency = 0.3
-    BorderStroke.Parent = self.AnimatedBorder
-
-    local BorderGradient = Instance.new("UIGradient")
-    BorderGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Colors.PinkLight),
-        ColorSequenceKeypoint.new(0.3, Colors.PinkMedium),
-        ColorSequenceKeypoint.new(0.7, Colors.PinkDark),
-        ColorSequenceKeypoint.new(1, Colors.PinkLight)
-    }
-    BorderGradient.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 0.8),
-        NumberSequenceKeypoint.new(0.2, 0.1),
-        NumberSequenceKeypoint.new(0.8, 0.1),
-        NumberSequenceKeypoint.new(1, 0.8)
-    }
-    BorderGradient.Parent = BorderStroke
-
-    -- Header
-    self.Header = Instance.new("Frame")
-    self.Header.Name = "Header"
-    self.Header.Size = UDim2.new(1, 0, 0, 80)
-    self.Header.BackgroundTransparency = 1
-    self.Header.ZIndex = 1001
-    self.Header.Parent = self.MainContainer
-
-    -- Title
-    self.TitleContainer = Instance.new("Frame")
-    self.TitleContainer.Size = UDim2.new(1, -40, 0, 60)
-    self.TitleContainer.Position = UDim2.new(0, 20, 0, 10)
-    self.TitleContainer.BackgroundTransparency = 1
-    self.TitleContainer.ZIndex = 1001
-    self.TitleContainer.Parent = self.Header
-
-    self.NexusText = Instance.new("TextLabel")
-    self.NexusText.Size = UDim2.new(1, 0, 0.5, 0)
-    self.NexusText.BackgroundTransparency = 1
-    self.NexusText.Text = "NEXUS"
-    self.NexusText.TextColor3 = Colors.TextPrimary
-    self.NexusText.TextScaled = true
-    self.NexusText.Font = Enum.Font.GothamBlack
-    self.NexusText.TextStrokeTransparency = 0.7
-    self.NexusText.TextStrokeColor3 = Colors.PinkDark
-    self.NexusText.ZIndex = 1002
-    self.NexusText.Parent = self.TitleContainer
-
-    self.NexusGradient = Instance.new("UIGradient")
-    self.NexusGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Colors.PinkLight),
-        ColorSequenceKeypoint.new(0.5, Colors.PinkMedium),
-        ColorSequenceKeypoint.new(1, Colors.PinkDark)
-    }
-    self.NexusGradient.Rotation = 45
-    self.NexusGradient.Parent = self.NexusText
-
-    self.SubtitleText = Instance.new("TextLabel")
-    self.SubtitleText.Size = UDim2.new(1, 0, 0.5, 0)
-    self.SubtitleText.Position = UDim2.new(0, 0, 0.5, 0)
-    self.SubtitleText.BackgroundTransparency = 1
-    self.SubtitleText.Text = "PURE GUI"
-    self.SubtitleText.TextColor3 = Colors.TextPrimary
-    self.SubtitleText.TextScaled = true
-    self.SubtitleText.Font = Enum.Font.GothamBlack
-    self.SubtitleText.TextStrokeTransparency = 0.7
-    self.SubtitleText.TextStrokeColor3 = Colors.PinkDark
-    self.SubtitleText.ZIndex = 1002
-    self.SubtitleText.Parent = self.TitleContainer
-
-    self.SubtitleGradient = Instance.new("UIGradient")
-    self.SubtitleGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Colors.PinkDark),
-        ColorSequenceKeypoint.new(0.5, Colors.PinkMedium),
-        ColorSequenceKeypoint.new(1, Colors.PinkLight)
-    }
-    self.SubtitleGradient.Rotation = -45
-    self.SubtitleGradient.Parent = self.SubtitleText
-
-    -- Tab System
-    self.TabArea = Instance.new("Frame")
-    self.TabArea.Size = UDim2.new(1, -40, 0, 40)
-    self.TabArea.Position = UDim2.new(0, 20, 0, 80)
-    self.TabArea.BackgroundTransparency = 1
-    self.TabArea.ZIndex = 1001
-    self.TabArea.Parent = self.MainContainer
-
-    local TabListLayout = Instance.new("UIListLayout")
-    TabListLayout.FillDirection = Enum.FillDirection.Horizontal
-    TabListLayout.Padding = UDim.new(0, 5)
-    TabListLayout.Parent = self.TabArea
-
-    -- Content Area
-    self.ContentArea = Instance.new("Frame")
-    self.ContentArea.Size = UDim2.new(1, -40, 1, -140)
-    self.ContentArea.Position = UDim2.new(0, 20, 0, 130)
-    self.ContentArea.BackgroundTransparency = 1
-    self.ContentArea.ZIndex = 1001
-    self.ContentArea.Parent = self.MainContainer
-
-    -- Tab Content Container
-    self.TabContent = Instance.new("Frame")
-    self.TabContent.Size = UDim2.new(1, 0, 1, 0)
-    self.TabContent.BackgroundTransparency = 1
-    self.TabContent.ZIndex = 1001
-    self.TabContent.Parent = self.ContentArea
-
-    -- Mobile Reopen Button
-    self.ReopenButton = Instance.new("ImageButton")
-    self.ReopenButton.Name = "ReopenButton"
-    self.ReopenButton.Size = UDim2.new(0, 60, 0, 60)
-    self.ReopenButton.Position = UDim2.new(0, 20, 0, 20)
-    self.ReopenButton.BackgroundColor3 = Colors.Primary
-    self.ReopenButton.BorderSizePixel = 0
-    self.ReopenButton.Image = "rbxassetid://75247573479445"
-    self.ReopenButton.ImageColor3 = Colors.PinkLight
-    self.ReopenButton.ScaleType = Enum.ScaleType.Fit
-    self.ReopenButton.Visible = false
-    self.ReopenButton.ZIndex = 1010
-    self.ReopenButton.Parent = self.ScreenGui
-
-    local ReopenCorner = Instance.new("UICorner")
-    ReopenCorner.CornerRadius = UDim.new(0, 15)
-    ReopenCorner.Parent = self.ReopenButton
-
-    local ReopenStroke = Instance.new("UIStroke")
-    ReopenStroke.Color = Colors.PinkLight
-    ReopenStroke.Thickness = 2
-    ReopenStroke.Transparency = 0.3
-    ReopenStroke.Parent = self.ReopenButton
-
-    -- Animation System
-    self.Animations = {
-        BorderTween = nil,
-        ReopenGlowTween = nil
-    }
-
-    -- Tab Management
-    self.Tabs = {}
-    self.ActiveTab = nil
-
-    -- Initialize
-    self:SetupAnimations()
-    self:SetupInteractions()
-    self:SetupDraggable()
-    StartParticleSystem(self.ParticleContainer)
-
-    return self
-end
-
-function NexusGUI:SetupAnimations()
-    -- Border Animation
-    self.Animations.BorderTween = TweenService:Create(self.AnimatedBorder.UIStroke.UIGradient, 
-        TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
-        {Rotation = 360})
-    self.Animations.BorderTween:Play()
-
-    -- Entrance Animation
-    self.MainContainer.Size = UDim2.new(0, 0, 0, 0)
-    self.MainContainer.BackgroundTransparency = 1
-    
-    TweenService:Create(self.MainContainer, 
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
-        {Size = UDim2.new(0, 550, 0, 600), BackgroundTransparency = 0}):Play()
-end
-
-function NexusGUI:SetupInteractions()
-    -- Hide/Show functionality
-    self.ReopenButton.MouseButton1Click:Connect(function() self:ShowGUI() end)
-
-    -- Keybind to hide/show
-    UserInputService.InputBegan:Connect(function(input, gp)
-        if input.KeyCode == Enum.KeyCode.RightShift then
-            if self.MainContainer.Visible then
-                self:HideGUI()
+        function library:isValidInput(input, checkTouch, checkMouse)
+            if isMobile then
+                return checkTouch and input.UserInputType == Enum.UserInputType.Touch
             else
-                self:ShowGUI()
-            end
-        end
-    end)
-end
-
-function NexusGUI:SetupDraggable()
-    local dragging, dragInput, dragStart, startPos
-
-    self.Header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = self.MainContainer.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-
-    self.ReopenButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = self.ReopenButton.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-
-    self.Header.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then 
-            dragInput = input 
-        end
-    end)
-
-    self.ReopenButton.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then 
-            dragInput = input 
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            local delta = input.Position - dragStart
-            if startPos == self.MainContainer.Position then
-                self.MainContainer.Position = UDim2.new(
-                    startPos.X.Scale,
-                    startPos.X.Offset + delta.X,
-                    startPos.Y.Scale,
-                    startPos.Y.Offset + delta.Y
-                )
-            else
-                self.ReopenButton.Position = UDim2.new(
-                    startPos.X.Scale,
-                    startPos.X.Offset + delta.X,
-                    startPos.Y.Scale,
-                    startPos.Y.Offset + delta.Y
-                )
-            end
-        end
-    end)
-end
-
--- ========================================
--- TAB SYSTEM IMPLEMENTATION
--- ========================================
-function NexusGUI:AddTab(tabName)
-    local tab = {
-        Name = tabName,
-        Container = nil,
-        Buttons = {},
-        Elements = {}
-    }
-
-    -- Create Tab Button
-    local tabButton = Instance.new("TextButton")
-    tabButton.Name = tabName .. "Tab"
-    tabButton.Size = UDim2.new(0, 100, 1, 0)
-    tabButton.BackgroundColor3 = Colors.Secondary
-    tabButton.BorderSizePixel = 0
-    tabButton.Text = tabName
-    tabButton.TextColor3 = Colors.TextSecondary
-    tabButton.TextSize = 14
-    tabButton.Font = Enum.Font.GothamMedium
-    tabButton.AutoButtonColor = false
-    tabButton.ZIndex = 1002
-    tabButton.Parent = self.TabArea
-
-    local tabCorner = Instance.new("UICorner")
-    tabCorner.CornerRadius = UDim.new(0, 8)
-    tabCorner.Parent = tabButton
-
-    local tabGradient = Instance.new("UIGradient")
-    tabGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Colors.Secondary),
-        ColorSequenceKeypoint.new(1, Colors.Primary)
-    }
-    tabGradient.Rotation = 90
-    tabGradient.Parent = tabButton
-
-    -- Create Tab Content
-    local tabContent = Instance.new("ScrollingFrame")
-    tabContent.Name = tabName .. "Content"
-    tabContent.Size = UDim2.new(1, 0, 1, 0)
-    tabContent.BackgroundTransparency = 1
-    tabContent.BorderSizePixel = 0
-    tabContent.ScrollBarThickness = 4
-    tabContent.ScrollBarImageColor3 = Colors.PinkMedium
-    tabContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    tabContent.ZIndex = 1001
-    tabContent.Visible = false
-    tabContent.Parent = self.TabContent
-
-    local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 10)
-    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Parent = tabContent
-
-    local contentPadding = Instance.new("UIPadding")
-    contentPadding.PaddingTop = UDim.new(0, 10)
-    contentPadding.PaddingLeft = UDim.new(0, 10)
-    contentPadding.PaddingRight = UDim.new(0, 10)
-    contentPadding.Parent = tabContent
-
-    tab.Container = tabContent
-    tab.Button = tabButton
-
-    -- Tab Button Interactions
-    tabButton.MouseEnter:Connect(function()
-        if self.ActiveTab ~= tab then
-            TweenService:Create(tabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Colors.HoverPrimary
-            }):Play()
-        end
-    end)
-
-    tabButton.MouseLeave:Connect(function()
-        if self.ActiveTab ~= tab then
-            TweenService:Create(tabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Colors.Secondary
-            }):Play()
-        end
-    end)
-
-    tabButton.MouseButton1Click:Connect(function()
-        self:SwitchTab(tab)
-    end)
-
-    -- Add to tabs list
-    table.insert(self.Tabs, tab)
-
-    -- Set as active if first tab
-    if #self.Tabs == 1 then
-        self:SwitchTab(tab)
-    end
-
-    return tab
-end
-
-function NexusGUI:SwitchTab(tab)
-    -- Hide all tabs
-    for _, otherTab in ipairs(self.Tabs) do
-        otherTab.Container.Visible = false
-        TweenService:Create(otherTab.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = Colors.Secondary,
-            TextColor3 = Colors.TextSecondary
-        }):Play()
-    end
-
-    -- Show selected tab
-    tab.Container.Visible = true
-    TweenService:Create(tab.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-        BackgroundColor3 = Colors.PinkMedium,
-        TextColor3 = Colors.TextPrimary
-    }):Play()
-
-    self.ActiveTab = tab
-end
-
--- ========================================
--- UI ELEMENT CREATION METHODS
--- ========================================
-function NexusGUI:AddSection(tab, sectionName)
-    local section = {}
-
-    local sectionFrame = Instance.new("Frame")
-    sectionFrame.Name = sectionName .. "Section"
-    sectionFrame.Size = UDim2.new(1, -20, 0, 0)
-    sectionFrame.BackgroundColor3 = Colors.Primary
-    sectionFrame.BorderSizePixel = 0
-    sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
-    sectionFrame.ZIndex = 1002
-    sectionFrame.Parent = tab.Container
-
-    local sectionCorner = Instance.new("UICorner")
-    sectionCorner.CornerRadius = UDim.new(0, 12)
-    sectionCorner.Parent = sectionFrame
-
-    local sectionStroke = Instance.new("UIStroke")
-    sectionStroke.Color = Colors.Border
-    sectionStroke.Thickness = 1
-    sectionStroke.Parent = sectionFrame
-
-    local sectionHeader = Instance.new("TextLabel")
-    sectionHeader.Size = UDim2.new(1, -20, 0, 30)
-    sectionHeader.Position = UDim2.new(0, 10, 0, 5)
-    sectionHeader.BackgroundTransparency = 1
-    sectionHeader.Text = sectionName
-    sectionHeader.TextColor3 = Colors.TextPrimary
-    sectionHeader.TextSize = 16
-    sectionHeader.Font = Enum.Font.GothamBold
-    sectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-    sectionHeader.ZIndex = 1003
-    sectionHeader.Parent = sectionFrame
-
-    local contentContainer = Instance.new("Frame")
-    contentContainer.Size = UDim2.new(1, -20, 0, 0)
-    contentContainer.Position = UDim2.new(0, 10, 0, 40)
-    contentContainer.BackgroundTransparency = 1
-    contentContainer.AutomaticSize = Enum.AutomaticSize.Y
-    contentContainer.ZIndex = 1002
-    contentContainer.Parent = sectionFrame
-
-    local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 8)
-    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Parent = contentContainer
-
-    section.Container = contentContainer
-    section.Frame = sectionFrame
-
-    function section:AddLabel(text, doesWrap)
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 0, doesWrap and 0 or 20)
-        label.BackgroundTransparency = 1
-        label.Text = text
-        label.TextColor3 = Colors.TextPrimary
-        label.TextSize = 14
-        label.Font = Enum.Font.Gotham
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.TextWrapped = doesWrap or false
-        label.AutomaticSize = doesWrap and Enum.AutomaticSize.Y or Enum.AutomaticSize.None
-        label.ZIndex = 1003
-        label.Parent = section.Container
-
-        return label
-    end
-
-    function section:AddButton(buttonText, callback)
-        local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1, 0, 0, 35)
-        button.BackgroundColor3 = Colors.Secondary
-        button.BorderSizePixel = 0
-        button.Text = buttonText
-        button.TextColor3 = Colors.TextPrimary
-        button.TextSize = 14
-        button.Font = Enum.Font.GothamMedium
-        button.AutoButtonColor = false
-        button.ZIndex = 1003
-        button.Parent = section.Container
-
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 8)
-        buttonCorner.Parent = button
-
-        local buttonGradient = Instance.new("UIGradient")
-        buttonGradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, Colors.Secondary),
-            ColorSequenceKeypoint.new(1, Colors.Primary)
-        }
-        buttonGradient.Rotation = 90
-        buttonGradient.Parent = button
-
-        -- Hover effects
-        button.MouseEnter:Connect(function()
-            TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Colors.HoverPrimary
-            }):Play()
-        end)
-
-        button.MouseLeave:Connect(function()
-            TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Colors.Secondary
-            }):Play()
-        end)
-
-        button.MouseButton1Click:Connect(function()
-            if callback then
-                callback()
-            end
-        end)
-
-        return button
-    end
-
-    function section:AddToggle(toggleText, defaultValue, callback)
-        local toggle = {
-            Value = defaultValue or false,
-            Callback = callback
-        }
-
-        local toggleFrame = Instance.new("Frame")
-        toggleFrame.Size = UDim2.new(1, 0, 0, 25)
-        toggleFrame.BackgroundTransparency = 1
-        toggleFrame.ZIndex = 1003
-        toggleFrame.Parent = section.Container
-
-        local toggleButton = Instance.new("TextButton")
-        toggleButton.Size = UDim2.new(0, 20, 0, 20)
-        toggleButton.Position = UDim2.new(0, 0, 0, 2)
-        toggleButton.BackgroundColor3 = defaultValue and Colors.PinkMedium or Colors.Secondary
-        toggleButton.BorderSizePixel = 0
-        toggleButton.Text = ""
-        toggleButton.AutoButtonColor = false
-        toggleButton.ZIndex = 1004
-        toggleButton.Parent = toggleFrame
-
-        local toggleCorner = Instance.new("UICorner")
-        toggleCorner.CornerRadius = UDim.new(0, 4)
-        toggleCorner.Parent = toggleButton
-
-        local toggleLabel = Instance.new("TextLabel")
-        toggleLabel.Size = UDim2.new(1, -25, 1, 0)
-        toggleLabel.Position = UDim2.new(0, 25, 0, 0)
-        toggleLabel.BackgroundTransparency = 1
-        toggleLabel.Text = toggleText
-        toggleLabel.TextColor3 = Colors.TextPrimary
-        toggleLabel.TextSize = 14
-        toggleLabel.Font = Enum.Font.Gotham
-        toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-        toggleLabel.ZIndex = 1004
-        toggleLabel.Parent = toggleFrame
-
-        function toggle:SetValue(value)
-            toggle.Value = value
-            TweenService:Create(toggleButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = value and Colors.PinkMedium or Colors.Secondary
-            }):Play()
-            
-            if toggle.Callback then
-                toggle.Callback(value)
+                return checkMouse and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2)
             end
         end
 
-        toggleButton.MouseButton1Click:Connect(function()
-            toggle:SetValue(not toggle.Value)
-        end)
-
-        return toggle
-    end
-
-    function section:AddSlider(sliderText, minValue, maxValue, defaultValue, callback)
-        local slider = {
-            Value = defaultValue or minValue,
-            Min = minValue,
-            Max = maxValue,
-            Callback = callback
-        }
-
-        local sliderFrame = Instance.new("Frame")
-        sliderFrame.Size = UDim2.new(1, 0, 0, 50)
-        sliderFrame.BackgroundTransparency = 1
-        sliderFrame.ZIndex = 1003
-        sliderFrame.Parent = section.Container
-
-        local sliderLabel = Instance.new("TextLabel")
-        sliderLabel.Size = UDim2.new(1, 0, 0, 20)
-        sliderLabel.BackgroundTransparency = 1
-        sliderLabel.Text = sliderText
-        sliderLabel.TextColor3 = Colors.TextPrimary
-        sliderLabel.TextSize = 14
-        sliderLabel.Font = Enum.Font.Gotham
-        sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-        sliderLabel.ZIndex = 1004
-        sliderLabel.Parent = sliderFrame
-
-        local valueLabel = Instance.new("TextLabel")
-        valueLabel.Size = UDim2.new(0, 60, 0, 20)
-        valueLabel.Position = UDim2.new(1, -60, 0, 0)
-        valueLabel.BackgroundTransparency = 1
-        valueLabel.Text = tostring(defaultValue or minValue)
-        valueLabel.TextColor3 = Colors.TextSecondary
-        valueLabel.TextSize = 12
-        valueLabel.Font = Enum.Font.Gotham
-        valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-        valueLabel.ZIndex = 1004
-        valueLabel.Parent = sliderFrame
-
-        local trackFrame = Instance.new("Frame")
-        trackFrame.Size = UDim2.new(1, 0, 0, 6)
-        trackFrame.Position = UDim2.new(0, 0, 0, 25)
-        trackFrame.BackgroundColor3 = Colors.Secondary
-        trackFrame.BorderSizePixel = 0
-        trackFrame.ZIndex = 1004
-        trackFrame.Parent = sliderFrame
-
-        local trackCorner = Instance.new("UICorner")
-        trackCorner.CornerRadius = UDim.new(1, 0)
-        trackCorner.Parent = trackFrame
-
-        local fillFrame = Instance.new("Frame")
-        fillFrame.Size = UDim2.new((defaultValue - minValue) / (maxValue - minValue), 0, 1, 0)
-        fillFrame.BackgroundColor3 = Colors.PinkMedium
-        fillFrame.BorderSizePixel = 0
-        fillFrame.ZIndex = 1005
-        fillFrame.Parent = trackFrame
-
-        local fillCorner = Instance.new("UICorner")
-        fillCorner.CornerRadius = UDim.new(1, 0)
-        fillCorner.Parent = fillFrame
-
-        local handle = Instance.new("Frame")
-        handle.Size = UDim2.new(0, 12, 0, 12)
-        handle.Position = UDim2.new((defaultValue - minValue) / (maxValue - minValue), -6, 0.5, -6)
-        handle.BackgroundColor3 = Colors.PinkLight
-        handle.BorderSizePixel = 0
-        handle.ZIndex = 1006
-        handle.Parent = trackFrame
-
-        local handleCorner = Instance.new("UICorner")
-        handleCorner.CornerRadius = UDim.new(1, 0)
-        handleCorner.Parent = handle
-
-        local isDragging = false
-
-        local function updateSlider(value)
-            local normalized = math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
-            fillFrame.Size = UDim2.new(normalized, 0, 1, 0)
-            handle.Position = UDim2.new(normalized, -6, 0.5, -6)
-            valueLabel.Text = tostring(math.floor(value))
-            slider.Value = value
-            
-            if slider.Callback then
-                slider.Callback(value)
-            end
-        end
-
-        trackFrame.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                isDragging = true
-                
-                local mousePos = input.Position.X
-                local trackPos = trackFrame.AbsolutePosition.X
-                local trackSize = trackFrame.AbsoluteSize.X
-                
-                local normalized = math.clamp((mousePos - trackPos) / trackSize, 0, 1)
-                local value = minValue + normalized * (maxValue - minValue)
-                updateSlider(value)
-            end
-        end)
-
-        UserInputService.InputChanged:Connect(function(input)
-            if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                local mousePos = input.Position.X
-                local trackPos = trackFrame.AbsolutePosition.X
-                local trackSize = trackFrame.AbsoluteSize.X
-                
-                local normalized = math.clamp((mousePos - trackPos) / trackSize, 0, 1)
-                local value = minValue + normalized * (maxValue - minValue)
-                updateSlider(value)
-            end
-        end)
-
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                isDragging = false
-            end
-        end)
-
-        function slider:SetValue(value)
-            updateSlider(math.clamp(value, minValue, maxValue))
-        end
-
-        return slider
-    end
-
-    function section:AddDropdown(dropdownText, options, defaultValue, callback)
-        local dropdown = {
-            Value = defaultValue or options[1],
-            Options = options,
-            Callback = callback,
-            IsOpen = false
-        }
-
-        local dropdownFrame = Instance.new("Frame")
-        dropdownFrame.Size = UDim2.new(1, 0, 0, 35)
-        dropdownFrame.BackgroundTransparency = 1
-        dropdownFrame.ZIndex = 1003
-        dropdownFrame.Parent = section.Container
-
-        local dropdownButton = Instance.new("TextButton")
-        dropdownButton.Size = UDim2.new(1, 0, 1, 0)
-        dropdownButton.BackgroundColor3 = Colors.Secondary
-        dropdownButton.BorderSizePixel = 0
-        dropdownButton.Text = dropdownText .. ": " .. (defaultValue or options[1])
-        dropdownButton.TextColor3 = Colors.TextPrimary
-        dropdownButton.TextSize = 14
-        dropdownButton.Font = Enum.Font.Gotham
-        dropdownButton.AutoButtonColor = false
-        dropdownButton.ZIndex = 1004
-        dropdownButton.Parent = dropdownFrame
-
-        local dropdownCorner = Instance.new("UICorner")
-        dropdownCorner.CornerRadius = UDim.new(0, 8)
-        dropdownCorner.Parent = dropdownButton
-
-        local dropdownList = Instance.new("ScrollingFrame")
-        dropdownList.Size = UDim2.new(1, 0, 0, 0)
-        dropdownList.Position = UDim2.new(0, 0, 1, 5)
-        dropdownList.BackgroundColor3 = Colors.Primary
-        dropdownList.BorderSizePixel = 0
-        dropdownList.ScrollBarThickness = 4
-        dropdownList.ScrollBarImageColor3 = Colors.PinkMedium
-        dropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        dropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
-        dropdownList.Visible = false
-        dropdownList.ZIndex = 1010
-        dropdownList.Parent = dropdownFrame
-
-        local listLayout = Instance.new("UIListLayout")
-        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        listLayout.Parent = dropdownList
-
-        local listCorner = Instance.new("UICorner")
-        listCorner.CornerRadius = UDim.new(0, 8)
-        listCorner.Parent = dropdownList
-
-        -- Create option buttons
-        for i, option in ipairs(options) do
-            local optionButton = Instance.new("TextButton")
-            optionButton.Size = UDim2.new(1, 0, 0, 30)
-            optionButton.BackgroundColor3 = Colors.Primary
-            optionButton.BorderSizePixel = 0
-            optionButton.Text = option
-            optionButton.TextColor3 = Colors.TextPrimary
-            optionButton.TextSize = 14
-            optionButton.Font = Enum.Font.Gotham
-            optionButton.AutoButtonColor = false
-            optionButton.ZIndex = 1011
-            optionButton.Parent = dropdownList
-
-            optionButton.MouseEnter:Connect(function()
-                TweenService:Create(optionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    BackgroundColor3 = Colors.HoverPrimary
-                }):Play()
-            end)
-
-            optionButton.MouseLeave:Connect(function()
-                TweenService:Create(optionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    BackgroundColor3 = Colors.Primary
-                }):Play()
-            end)
-
-            optionButton.MouseButton1Click:Connect(function()
-                dropdown.Value = option
-                dropdownButton.Text = dropdownText .. ": " .. option
-                dropdown:Close()
-                
-                if dropdown.Callback then
-                    dropdown.Callback(option)
+        function library:connectInput(element, callback, checkTouch, checkMouse)
+            return element.InputBegan:Connect(function(input)
+                if self:isValidInput(input, checkTouch, checkMouse) then
+                    callback(input)
                 end
             end)
         end
 
-        function dropdown:Open()
-            dropdown.IsOpen = true
-            dropdownList.Visible = true
-            TweenService:Create(dropdownList, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.new(1, 0, 0, math.min(#options * 30, 150))
-            }):Play()
-        end
+        function library:resizify(frame) 
+            local Frame = Instance.new("TextButton")
+            Frame.Position = dim2(1, -10, 1, -10)
+            Frame.BorderColor3 = rgb(0, 0, 0)
+            Frame.Size = UDim2.new(0.8, 0, 0.3, 0)
+            Frame.BorderSizePixel = 0
+            Frame.BackgroundColor3 = rgb(255, 255, 255)
+            Frame.Parent = frame
+            Frame.BackgroundTransparency = 1 
+            Frame.Text = ""
 
-        function dropdown:Close()
-            dropdown.IsOpen = false
-            TweenService:Create(dropdownList, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.new(1, 0, 0, 0)
-            }):Play()
-            task.wait(0.2)
-            dropdownList.Visible = false
-        end
+            local resizing = false 
+            local start_size 
+            local start 
+            local og_size = frame.Size  
 
-        function dropdown:Toggle()
-            if dropdown.IsOpen then
-                dropdown:Close()
-            else
-                dropdown:Open()
-            end
-        end
+            library:connectInput(Frame, function(input)
+                resizing = true
+                start = input.Position
+                start_size = frame.Size
+            end, true, true)
 
-        dropdownButton.MouseButton1Click:Connect(function()
-            dropdown:Toggle()
-        end)
-
-        -- Close dropdown when clicking outside
-        UserInputService.InputBegan:Connect(function(input)
-            if dropdown.IsOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
-                local mousePos = input.Position
-                local absPos = dropdownFrame.AbsolutePosition
-                local absSize = dropdownFrame.AbsoluteSize
-                
-                if not (mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X and
-                       mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y + dropdownList.AbsoluteSize.Y) then
-                    dropdown:Close()
+            library:connection(uis.InputEnded, function(input)
+                if library:isValidInput(input, true, true) then
+                    resizing = false
                 end
+            end)
+
+            library:connection(uis.InputChanged, function(input) 
+                if resizing and ((isMobile and input.UserInputType == Enum.UserInputType.Touch) or (isPC and input.UserInputType == Enum.UserInputType.MouseMovement)) then
+                    local viewport_x = camera.ViewportSize.X
+                    local viewport_y = camera.ViewportSize.Y
+
+                    local current_size = dim2(
+                        start_size.X.Scale,
+                        math.clamp(
+                            start_size.X.Offset + (input.Position.X - start.X),
+                            og_size.X.Offset,
+                            viewport_x
+                        ),
+                        start_size.Y.Scale,
+                        math.clamp(
+                            start_size.Y.Offset + (input.Position.Y - start.Y),
+                            og_size.Y.Offset,
+                            viewport_y
+                        )
+                    )
+
+                    library:tween(frame, {Size = current_size}, Enum.EasingStyle.Linear, 0.05)
+                end
+            end)
+        end 
+
+        function fag(tbl)
+            local Size = 0
+            for _ in tbl do
+                Size = Size + 1
             end
-        end)
-
-        return dropdown
-    end
-
-    return section
-end
-
-function NexusGUI:HideGUI()
-    self.MainContainer.Visible = false
-    self.ReopenButton.Visible = true
-    
-    self.ReopenButton.Size = UDim2.new(0, 0, 0, 0)
-    TweenService:Create(self.ReopenButton, 
-        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
-        {Size = UDim2.new(0, 70, 0, 70)}):Play()
-end
-
-function NexusGUI:ShowGUI()
-    self.ReopenButton.Visible = false
-    self.MainContainer.Visible = true
-    
-    self.MainContainer.Size = UDim2.new(0, 0, 0, 0)
-    TweenService:Create(self.MainContainer, 
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
-        {Size = UDim2.new(0, 550, 0, 600)}):Play()
-end
-
-function NexusGUI:CreateNotification(title, message, color, duration)
-    local notif = Instance.new("Frame")
-    notif.Size = UDim2.new(0, 300, 0, 80)
-    notif.Position = UDim2.new(1, 10, 0, 10)
-    notif.BackgroundColor3 = Colors.Surface
-    notif.BorderSizePixel = 0
-    notif.ZIndex = 2000
-    notif.Parent = self.ScreenGui
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = notif
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = color
-    stroke.Thickness = 2
-    stroke.Parent = notif
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -20, 0, 25)
-    titleLabel.Position = UDim2.new(0, 10, 0, 10)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = color
-    titleLabel.TextSize = 16
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.ZIndex = 2001
-    titleLabel.Parent = notif
-    
-    local messageLabel = Instance.new("TextLabel")
-    messageLabel.Size = UDim2.new(1, -20, 1, -40)
-    messageLabel.Position = UDim2.new(0, 10, 0, 35)
-    messageLabel.BackgroundTransparency = 1
-    messageLabel.Text = message
-    messageLabel.TextColor3 = Colors.TextPrimary
-    messageLabel.TextSize = 14
-    messageLabel.Font = Enum.Font.Gotham
-    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
-    messageLabel.TextYAlignment = Enum.TextYAlignment.Top
-    messageLabel.TextWrapped = true
-    messageLabel.ZIndex = 2001
-    messageLabel.Parent = notif
-    
-    -- Entrance animation
-    notif.Position = UDim2.new(1, 10, 0, 10)
-    TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1, -310, 0, 10)
-    }):Play()
-    
-    -- Auto remove
-    task.spawn(function()
-        task.wait(duration or 5)
-        TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Position = UDim2.new(1, 10, 0, 10)
-        }):Play()
-        task.wait(0.3)
-        notif:Destroy()
-    end)
-end
-
-function NexusGUI:Destroy()
-    ParticleState.IsDestroyed = true
-    for _, particle in ipairs(ParticleState.Particles) do
-        if particle.frame then
-            particle.frame:Destroy()
+            return Size
         end
-    end
-    ParticleState.Particles = {}
-    
-    if self.ScreenGui then
-        self.ScreenGui:Destroy()
-    end
-end
+        
+        function library:next_flag()
+            local index = fag(library.flags) + 1;
+            local str = string.format("flagnumber%s", index)
+            return str;
+        end 
 
--- Create and return the GUI
-return NexusGUI:Create()
+        function library:mouse_in_frame(uiobject)
+            if isMobile then
+                local touchPositions = uis:GetTouchPoints()
+                if #touchPositions == 0 then return false end
+                local touchPos = touchPositions[1].Position
+                
+                local y_cond = uiobject.AbsolutePosition.Y <= touchPos.Y and touchPos.Y <= uiobject.AbsolutePosition.Y + uiobject.AbsoluteSize.Y
+                local x_cond = uiobject.AbsolutePosition.X <= touchPos.X and touchPos.X <= uiobject.AbsolutePosition.X + uiobject.AbsoluteSize.X
+                return (y_cond and x_cond)
+            else
+                local y_cond = uiobject.AbsolutePosition.Y <= mouse.Y and mouse.Y <= uiobject.AbsolutePosition.Y + uiobject.AbsoluteSize.Y
+                local x_cond = uiobject.AbsolutePosition.X <= mouse.X and mouse.X <= uiobject.AbsolutePosition.X + uiobject.AbsoluteSize.X
+                return (y_cond and x_cond)
+            end
+        end
+
+        function library:draggify(frame)
+            local dragging = false 
+            local start_size = frame.Position
+            local start 
+
+            library:connectInput(frame, function(input)
+                dragging = true
+                start = input.Position
+                start_size = frame.Position
+            end, true, true)
+
+            library:connection(uis.InputEnded, function(input)
+                if library:isValidInput(input, true, true) then
+                    dragging = false
+                end
+            end)
+
+            library:connection(uis.InputChanged, function(input) 
+                if dragging and ((isMobile and input.UserInputType == Enum.UserInputType.Touch) or (isPC and input.UserInputType == Enum.UserInputType.MouseMovement)) then
+                    local viewport_x = camera.ViewportSize.X
+                    local viewport_y = camera.ViewportSize.Y
+
+                    local current_position = dim2(
+                        0,
+                        clamp(
+                            start_size.X.Offset + (input.Position.X - start.X),
+                            0,
+                            viewport_x - frame.Size.X.Offset
+                        ),
+                        0,
+                        math.clamp(
+                            start_size.Y.Offset + (input.Position.Y - start.Y),
+                            0,
+                            viewport_y - frame.Size.Y.Offset
+                        )
+                    )
+
+                    library:tween(frame, {Position = current_position}, Enum.EasingStyle.Linear, 0.05)
+                    library:close_element()
+                end
+            end)
+        end 
+
+        function library:convert(str)
+            local values = {}
+            for value in string.gmatch(str, "[^,]+") do
+                insert(values, tonumber(value))
+            end
+            if #values == 4 then              
+                return unpack(values)
+            else 
+                return
+            end
+        end
+        
+        function library:convert_enum(enum)
+            local enum_parts = {}
+            for part in string.gmatch(enum, "[%w_]+") do
+                insert(enum_parts, part)
+            end
+            local enum_table = Enum
+            for i = 2, #enum_parts do
+                local enum_item = enum_table[enum_parts[i]]
+                enum_table = enum_item
+            end
+            return enum_table
+        end
+
+        local config_holder;
+        function library:update_config_list() 
+            if not config_holder then 
+                return 
+            end
+            local list = {}
+            for idx, file in listfiles(library.directory .. "/configs") do
+                local name = file:gsub(library.directory .. "/configs\\", ""):gsub(".cfg", ""):gsub(library.directory .. "\\configs\\", "")
+                list[#list + 1] = name
+            end
+            config_holder.refresh_options(list)
+        end 
+
+        function library:get_config()
+            local Config = {}
+            for _, v in next, flags do
+                if type(v) == "table" and v.key then
+                    Config[_] = {active = v.active, mode = v.mode, key = tostring(v.key)}
+                elseif type(v) == "table" and v["Transparency"] and v["Color"] then
+                    Config[_] = {Transparency = v["Transparency"], Color = v["Color"]:ToHex()}
+                else
+                    Config[_] = v
+                end
+            end 
+            return http_service:JSONEncode(Config)
+        end
+
+        function library:load_config(config_json) 
+            local config = http_service:JSONDecode(config_json)
+            for _, v in config do 
+                local function_set = library.config_flags[_]
+                if _ == "config_name_list" then 
+                    continue 
+                end
+                if function_set then 
+                    if type(v) == "table" and v["Transparency"] and v["Color"] then
+                        function_set(hex(v["Color"]), v["Transparency"])
+                    elseif type(v) == "table" and v["active"] then 
+                        function_set(v)
+                    else
+                        function_set(v)
+                    end
+                end 
+            end 
+        end 
+        
+        function library:round(number, float) 
+            local multiplier = 1 / (float or 1)
+            return floor(number * multiplier + 0.5) / multiplier
+        end 
+
+        function library:apply_theme(instance, theme, property) 
+            insert(themes.utility[theme][property], instance)
+        end
+
+        function library:update_theme(theme, color)
+            for _, property in themes.utility[theme] do 
+                for m, object in property do 
+                    if object[_] == themes.preset[theme] then 
+                        object[_] = color 
+                    end 
+                end 
+            end 
+            themes.preset[theme] = color 
+        end 
+
+        function library:connection(signal, callback)
+            local connection = signal:Connect(callback)
+            insert(library.connections, connection)
+            return connection 
+        end
+
+        function library:close_element(new_path) 
+            local open_element = library.current_open
+            if open_element and new_path ~= open_element then
+                open_element.set_visible(false)
+                open_element.open = false;
+            end 
+            if new_path ~= open_element then 
+                library.current_open = new_path or nil;
+            end
+        end 
+
+        function library:create(instance, options)
+            local ins = Instance.new(instance) 
+            for prop, value in options do 
+                ins[prop] = value
+            end
+            return ins 
+        end
+
+        function library:unload_menu() 
+            if library[ "items" ] then 
+                library[ "items" ]:Destroy()
+            end
+            if library[ "other" ] then 
+                library[ "other" ]:Destroy()
+            end 
+            for index, connection in library.connections do 
+                connection:Disconnect() 
+                connection = nil 
+            end
+            library = nil 
+        end 
+    --
+    
+    -- Library element functions
+        function library:window(properties)
+            local cfg = { 
+                suffix = properties.suffix or properties.Suffix or "tech";
+                name = properties.name or properties.Name or "nebula";
+                game_name = properties.gameInfo or properties.game_info or properties.GameInfo or "Milenium for Counter-Strike: Global Offensive";
+                size = properties.size or properties.Size or dim2(0, 700, 0, 565);
+                selected_tab;
+                items = {};
+                tween;
+            }
+            
+            library[ "items" ] = library:create( "ScreenGui" , {
+                Parent = coregui;
+                Name = "\0";
+                Enabled = true;
+                ZIndexBehavior = Enum.ZIndexBehavior.Global;
+                IgnoreGuiInset = true;
+            });
+            
+            library[ "other" ] = library:create( "ScreenGui" , {
+                Parent = coregui;
+                Name = "\0";
+                Enabled = false;
+                ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+                IgnoreGuiInset = true;
+            }); 
+
+            local items = cfg.items; do
+                items[ "main" ] = library:create( "Frame" , {
+                    Parent = library[ "items" ];
+                    Size = cfg.size;
+                    Name = "\0";
+                    Position = dim2(0.5, -cfg.size.X.Offset / 2, 0.5, -cfg.size.Y.Offset / 2);
+                    BorderColor3 = rgb(0, 0, 0);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(14, 14, 16)
+                }); 
+                items[ "main" ].Position = dim2(0, items[ "main" ].AbsolutePosition.X, 0, items[ "main" ].AbsolutePosition.Y)
+                
+                -- Add mobile scaling
+                if isMobile then
+                    library:create("UIScale", {
+                        Parent = items["main"],
+                        Scale = scale
+                    })
+                end
+                
+                library:create( "UICorner" , {
+                    Parent = items[ "main" ];
+                    CornerRadius = dim(0, 10)
+                });
+                
+                library:create( "UIStroke" , {
+                    Color = rgb(23, 23, 29);
+                    Parent = items[ "main" ];
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                });
+                
+                items[ "side_frame" ] = library:create( "Frame" , {
+                    Parent = items[ "main" ];
+                    BackgroundTransparency = 1;
+                    Name = "\0";
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(0, 196, 1, -25);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(14, 14, 16)
+                });
+                
+                library:create( "Frame" , {
+                    AnchorPoint = vec2(1, 0);
+                    Parent = items[ "side_frame" ];
+                    Position = dim2(1, 0, 0, 0);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(0, 1, 1, 0);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(21, 21, 23)
+                });
+                
+                items[ "button_holder" ] = library:create( "Frame" , {
+                    Parent = items[ "side_frame" ];
+                    Name = "\0";
+                    BackgroundTransparency = 1;
+                    Position = dim2(0, 0, 0, 60);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(1, 0, 1, -60);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                }); cfg.button_holder = items[ "button_holder" ];
+                
+                library:create( "UIListLayout" , {
+                    Parent = items[ "button_holder" ];
+                    Padding = dim(0, 5);
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                });
+                
+                library:create( "UIPadding" , {
+                    PaddingTop = dim(0, 16);
+                    PaddingBottom = dim(0, 36);
+                    Parent = items[ "button_holder" ];
+                    PaddingRight = dim(0, 11);
+                    PaddingLeft = dim(0, 10)
+                });
+
+                local accent = themes.preset.accent
+                items[ "title" ] = library:create( "TextLabel" , {
+                    FontFace = fonts.font;
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = name;
+                    Parent = items[ "side_frame" ];
+                    Name = "\0";
+                    Text = string.format('<u>%s</u><font color = "rgb(255, 255, 255)">%s</font>', cfg.name, cfg.suffix);
+                    BackgroundTransparency = 1;
+                    Size = dim2(1, 0, 0, 70);
+                    TextColor3 = themes.preset.accent;
+                    BorderSizePixel = 0;
+                    RichText = true;
+                    TextSize = 30;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                }); library:apply_theme(items[ "title" ], "accent", "TextColor3");
+                
+                items[ "multi_holder" ] = library:create( "Frame" , {
+                    Parent = items[ "main" ];
+                    Name = "\0";
+                    BackgroundTransparency = 1;
+                    Position = dim2(0, 196, 0, 0);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(1, -196, 0, 56);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                }); cfg.multi_holder = items[ "multi_holder" ];
+                
+                library:create( "Frame" , {
+                    AnchorPoint = vec2(0, 1);
+                    Parent = items[ "multi_holder" ];
+                    Position = dim2(0, 0, 1, 0);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(1, 0, 0, 1);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(21, 21, 23)
+                });
+                
+                items[ "shadow" ] = library:create( "ImageLabel" , {
+                    ImageColor3 = rgb(0, 0, 0);
+                    ScaleType = Enum.ScaleType.Slice;
+                    Parent = items[ "main" ];
+                    BorderColor3 = rgb(0, 0, 0);
+                    Name = "\0";
+                    BackgroundColor3 = rgb(255, 255, 255);
+                    Size = dim2(1, 75, 1, 75);
+                    AnchorPoint = vec2(0.5, 0.5);
+                    Image = "rbxassetid://112971167999062";
+                    BackgroundTransparency = 1;
+                    Position = dim2(0.5, 0, 0.5, 0);
+                    SliceScale = 0.75;
+                    ZIndex = -100;
+                    BorderSizePixel = 0;
+                    SliceCenter = rect(vec2(112, 112), vec2(147, 147))
+                });
+                
+                items[ "global_fade" ] = library:create( "Frame" , {
+                    Parent = items[ "main" ];
+                    Name = "\0";
+                    BackgroundTransparency = 1;
+                    Position = dim2(0, 196, 0, 56);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(1, -196, 1, -81);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(14, 14, 16);
+                    ZIndex = 2;
+                });                
+
+                library:create( "UICorner" , {
+                    Parent = items[ "shadow" ];
+                    CornerRadius = dim(0, 5)
+                });
+                
+                items[ "info" ] = library:create( "Frame" , {
+                    AnchorPoint = vec2(0, 1);
+                    Parent = items[ "main" ];
+                    Name = "\0";
+                    Position = dim2(0, 0, 1, 0);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(1, 0, 0, 25);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(23, 23, 25)
+                });
+                
+                library:create( "UICorner" , {
+                    Parent = items[ "info" ];
+                    CornerRadius = dim(0, 10)
+                });
+                
+                items[ "grey_fill" ] = library:create( "Frame" , {
+                    Name = "\0";
+                    Parent = items[ "info" ];
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(1, 0, 0, 6);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(23, 23, 25)
+                });
+                
+                items[ "game" ] = library:create( "TextLabel" , {
+                    FontFace = fonts.font;
+                    Parent = items[ "info" ];
+                    TextColor3 = rgb(72, 72, 73);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = cfg.game_name;
+                    Name = "\0";
+                    Size = dim2(1, 0, 0, 0);
+                    AnchorPoint = vec2(0, 0.5);
+                    Position = dim2(0, 10, 0.5, -1);
+                    BackgroundTransparency = 1;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    BorderSizePixel = 0;
+                    AutomaticSize = Enum.AutomaticSize.XY;
+                    TextSize = 14;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                }); 
+                
+                items[ "other_info" ] = library:create( "TextLabel" , {
+                    Parent = items[ "info" ];
+                    RichText = true;
+                    Name = "\0";
+                    TextColor3 = themes.preset.accent;
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = '<font color="rgb(72, 72, 73)">32 days left, </font>' .. cfg.name .. cfg.suffix;
+                    Size = dim2(1, 0, 0, 0);
+                    Position = dim2(0, -10, 0.5, -1);
+                    AnchorPoint = vec2(0, 0.5);
+                    BorderSizePixel = 0;
+                    BackgroundTransparency = 1;
+                    TextXAlignment = Enum.TextXAlignment.Right;
+                    AutomaticSize = Enum.AutomaticSize.XY;
+                    FontFace = fonts.font;
+                    TextSize = 14;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                }); library:apply_theme(items[ "other_info" ], "accent", "TextColor3");        
+            end 
+
+            -- Mobile close button
+            if isMobile then
+                items[ "mobile_close" ] = library:create( "TextButton" , {
+                    Parent = library[ "items" ];
+                    Name = "MobileClose";
+                    Position = dim2(0, 20, 1, -20);
+                    AnchorPoint = vec2(0, 1);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(0, 75, 0, 50);
+                    BorderSizePixel = 0;
+                    Text = "Toggle UI";
+                    AutoButtonColor = false;
+                    Visible = true;
+                    BackgroundColor3 = rgb(25, 25, 29)
+                });
+                
+                library:create( "UICorner" , {
+                    Parent = items[ "mobile_close" ];
+                    CornerRadius = dim(0, 10)
+                });
+                
+                library:create( "UIStroke" , {
+                    Color = rgb(23, 23, 29);
+                    Parent = items[ "mobile_close" ];
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                });
+
+                library:connectInput(items[ "mobile_close" ], function()
+                    cfg.toggle_menu(not library[ "items" ].Enabled)
+                end, true, true)
+            end
+
+            do -- Other
+                library:draggify(items[ "main" ])
+                library:resizify(items[ "main" ])
+            end 
+
+            function cfg.toggle_menu(bool) 
+                library[ "items" ].Enabled = bool
+            end 
+                
+            return setmetatable(cfg, library)
+        end 
+
+        function library:tab(properties)
+            local cfg = {
+                name = properties.name or properties.Name or "visuals"; 
+                icon = properties.icon or properties.Icon or "http://www.roblox.com/asset/?id=6034767608";
+                tabs = properties.tabs or properties.Tabs or {"Main", "Misc.", "Settings"};
+                pages = {};
+                current_multi; 
+                items = {};
+            } 
+
+            local items = cfg.items; do 
+                items[ "tab_holder" ] = library:create( "Frame" , {
+                    Parent = library.cache;
+                    Name = "\0";
+                    Visible = false;
+                    BackgroundTransparency = 1;
+                    Position = dim2(0, 196, 0, 56);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(1, -216, 1, -101);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                });
+                
+                -- Tab buttons 
+                items[ "button" ] = library:create( "TextButton" , {
+                    FontFace = fonts.font;
+                    TextColor3 = rgb(255, 255, 255);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = "";
+                    Parent = self.items[ "button_holder" ];
+                    AutoButtonColor = false;
+                    BackgroundTransparency = 1;
+                    Name = "\0";
+                    Size = dim2(1, 0, 0, 35);
+                    BorderSizePixel = 0;
+                    TextSize = 16;
+                    BackgroundColor3 = rgb(29, 29, 29)
+                });
+                
+                items[ "icon" ] = library:create( "ImageLabel" , {
+                    ImageColor3 = rgb(72, 72, 73);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Parent = items[ "button" ];
+                    AnchorPoint = vec2(0, 0.5);
+                    Image = cfg.icon;
+                    BackgroundTransparency = 1;
+                    Position = dim2(0, 10, 0.5, 0);
+                    Name = "\0";
+                    Size = dim2(0, 22, 0, 22);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                }); library:apply_theme(items[ "icon" ], "accent", "ImageColor3");
+                
+                items[ "name" ] = library:create( "TextLabel" , {
+                    FontFace = fonts.font;
+                    TextColor3 = rgb(72, 72, 73);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = cfg.name;
+                    Parent = items[ "button" ];
+                    Name = "\0";
+                    Size = dim2(0, 0, 1, 0);
+                    Position = dim2(0, 40, 0, 0);
+                    BackgroundTransparency = 1;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    BorderSizePixel = 0;
+                    AutomaticSize = Enum.AutomaticSize.X;
+                    TextSize = 16;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                });
+                
+                library:create( "UIPadding" , {
+                    Parent = items[ "name" ];
+                    PaddingRight = dim(0, 5);
+                    PaddingLeft = dim(0, 5)
+                });
+                
+                library:create( "UICorner" , {
+                    Parent = items[ "button" ];
+                    CornerRadius = dim(0, 7)
+                });
+                
+                library:create( "UIStroke" , {
+                    Color = rgb(23, 23, 29);
+                    Parent = items[ "button" ];
+                    Enabled = false;
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                });
+
+                -- Multi Sections
+                items[ "multi_section_button_holder" ] = library:create( "Frame" , {
+                    Parent = library.cache;
+                    BackgroundTransparency = 1;
+                    Name = "\0";
+                    Visible = false;
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(1, 0, 1, 0);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                });
+                
+                library:create( "UIListLayout" , {
+                    Parent = items[ "multi_section_button_holder" ];
+                    Padding = dim(0, 7);
+                    SortOrder = Enum.SortOrder.LayoutOrder;
+                    FillDirection = Enum.FillDirection.Horizontal
+                });
+                
+                library:create( "UIPadding" , {
+                    PaddingTop = dim(0, 8);
+                    PaddingBottom = dim(0, 7);
+                    Parent = items[ "multi_section_button_holder" ];
+                    PaddingRight = dim(0, 7);
+                    PaddingLeft = dim(0, 7)
+                });                        
+
+                for _, section in cfg.tabs do
+                    local data = {items = {}} 
+                    local multi_items = data.items; do 
+                        -- Button
+                        multi_items[ "button" ] = library:create( "TextButton" , {
+                            FontFace = fonts.font;
+                            TextColor3 = rgb(255, 255, 255);
+                            BorderColor3 = rgb(0, 0, 0);
+                            AutoButtonColor = false;
+                            Text = "";
+                            Parent = items[ "multi_section_button_holder" ];
+                            Name = "\0";
+                            Size = dim2(0, 0, 0, 39);
+                            BackgroundTransparency = 1;
+                            ClipsDescendants = true;
+                            BorderSizePixel = 0;
+                            AutomaticSize = Enum.AutomaticSize.X;
+                            TextSize = 16;
+                            BackgroundColor3 = rgb(25, 25, 29)
+                        });
+                        
+                        multi_items[ "name" ] = library:create( "TextLabel" , {
+                            FontFace = fonts.font;
+                            TextColor3 = rgb(62, 62, 63);
+                            BorderColor3 = rgb(0, 0, 0);
+                            Text = section;
+                            Parent = multi_items[ "button" ];
+                            Name = "\0";
+                            Size = dim2(0, 0, 1, 0);
+                            BackgroundTransparency = 1;
+                            TextXAlignment = Enum.TextXAlignment.Left;
+                            BorderSizePixel = 0;
+                            AutomaticSize = Enum.AutomaticSize.XY;
+                            TextSize = 16;
+                            BackgroundColor3 = rgb(255, 255, 255)
+                        });
+                        
+                        library:create( "UIPadding" , {
+                            Parent = multi_items[ "name" ];
+                            PaddingRight = dim(0, 5);
+                            PaddingLeft = dim(0, 5)
+                        });
+                        
+                        multi_items[ "accent" ] = library:create( "Frame" , {
+                            BorderColor3 = rgb(0, 0, 0);
+                            AnchorPoint = vec2(0, 1);
+                            Parent = multi_items[ "button" ];
+                            BackgroundTransparency = 1;
+                            Position = dim2(0, 10, 1, 4);
+                            Name = "\0";
+                            Size = dim2(1, -20, 0, 6);
+                            BorderSizePixel = 0;
+                            BackgroundColor3 = themes.preset.accent
+                        }); library:apply_theme(multi_items[ "accent" ], "accent", "BackgroundColor3");
+                        
+                        library:create( "UICorner" , {
+                            Parent = multi_items[ "accent" ];
+                            CornerRadius = dim(0, 999)
+                        });
+                        
+                        library:create( "UIPadding" , {
+                            Parent = multi_items[ "button" ];
+                            PaddingRight = dim(0, 10);
+                            PaddingLeft = dim(0, 10)
+                        });
+                        
+                        library:create( "UICorner" , {
+                            Parent = multi_items[ "button" ];
+                            CornerRadius = dim(0, 7)
+                        }); 
+
+                        -- Tab 
+                        multi_items[ "tab" ] = library:create( "Frame" , {
+                            Parent = library.cache;
+                            BackgroundTransparency = 1;
+                            Name = "\0";
+                            BorderColor3 = rgb(0, 0, 0);
+                            Size = dim2(1, -20, 1, -20);
+                            BorderSizePixel = 0;
+                            Visible = false;
+                            BackgroundColor3 = rgb(255, 255, 255)
+                        });
+                        
+                        library:create( "UIListLayout" , {
+                            FillDirection = Enum.FillDirection.Vertical;
+                            HorizontalFlex = Enum.UIFlexAlignment.Fill;
+                            Parent = multi_items[ "tab" ];
+                            Padding = dim(0, 7);
+                            SortOrder = Enum.SortOrder.LayoutOrder;
+                            VerticalFlex = Enum.UIFlexAlignment.Fill
+                        });
+                        
+                        library:create( "UIPadding" , {
+                            PaddingTop = dim(0, 7);
+                            PaddingBottom = dim(0, 7);
+                            Parent = multi_items[ "tab" ];
+                            PaddingRight = dim(0, 7);
+                            PaddingLeft = dim(0, 7)
+                        });
+                    end
+
+                    data.text = multi_items[ "name" ]
+                    data.accent = multi_items[ "accent" ]
+                    data.button = multi_items[ "button" ]
+                    data.page = multi_items[ "tab" ]
+                    data.parent = setmetatable(data, library):sub_tab({}).items[ "tab_parent" ]
+                    
+                    function data.open_page()
+                        local page = cfg.current_multi; 
+                        if page and page.text ~= data.text then 
+                            self.items[ "global_fade" ].BackgroundTransparency = 0
+                            library:tween(self.items[ "global_fade" ], {BackgroundTransparency = 1}, Enum.EasingStyle.Quad, 0.4)
+                            local old_size = page.page.Size
+                            page.page.Size = dim2(1, -20, 1, -20)
+                        end
+
+                        if page then
+                            library:tween(page.text, {TextColor3 = rgb(62, 62, 63)})
+                            library:tween(page.accent, {BackgroundTransparency = 1})
+                            library:tween(page.button, {BackgroundTransparency = 1})
+                            page.page.Visible = false
+                            page.page.Parent = library[ "cache" ] 
+                        end 
+                        
+                        library:tween(data.text, {TextColor3 = rgb(255, 255, 255)})
+                        library:tween(data.accent, {BackgroundTransparency = 0})
+                        library:tween(data.button, {BackgroundTransparency = 0})
+                        library:tween(data.page, {Size = dim2(1, 0, 1, 0)}, Enum.EasingStyle.Quad, 0.4)
+                        data.page.Visible = true
+                        data.page.Parent = items["tab_holder"]
+                        cfg.current_multi = data
+                        library:close_element()
+                    end
+
+                    library:connectInput(multi_items[ "button" ], function()
+                        data.open_page() 
+                    end, true, true)
+
+                    cfg.pages[#cfg.pages + 1] = setmetatable(data, library)
+                end 
+                cfg.pages[1].open_page()
+            end 
+
+            function cfg.open_tab() 
+                local selected_tab = self.selected_tab
+                if selected_tab then 
+                    if selected_tab[ 4 ] ~= items[ "tab_holder" ] then 
+                        self.items[ "global_fade" ].BackgroundTransparency = 0
+                        library:tween(self.items[ "global_fade" ], {BackgroundTransparency = 1}, Enum.EasingStyle.Quad, 0.4)
+                        selected_tab[ 4 ].Size = dim2(1, -216, 1, -101)
+                    end
+                    library:tween(selected_tab[ 1 ], {BackgroundTransparency = 1})
+                    library:tween(selected_tab[ 2 ], {ImageColor3 = rgb(72, 72, 73)})
+                    library:tween(selected_tab[ 3 ], {TextColor3 = rgb(72, 72, 73)})
+                    selected_tab[ 4 ].Visible = false
+                    selected_tab[ 4 ].Parent = library[ "cache" ]
+                    selected_tab[ 5 ].Visible = false
+                    selected_tab[ 5 ].Parent = library[ "cache" ]
+                end
+
+                library:tween(items[ "button" ], {BackgroundTransparency = 0})
+                library:tween(items[ "icon" ], {ImageColor3 = themes.preset.accent})
+                library:tween(items[ "name" ], {TextColor3 = rgb(255, 255, 255)})
+                library:tween(items[ "tab_holder" ], {Size = dim2(1, -196, 1, -81)}, Enum.EasingStyle.Quad, 0.4)
+                items[ "tab_holder" ].Visible = true 
+                items[ "tab_holder" ].Parent = self.items[ "main" ]
+                items[ "multi_section_button_holder" ].Visible = true 
+                items[ "multi_section_button_holder" ].Parent = self.items[ "multi_holder" ]
+                self.selected_tab = {
+                    items[ "button" ];
+                    items[ "icon" ];
+                    items[ "name" ];
+                    items[ "tab_holder" ];
+                    items[ "multi_section_button_holder" ];
+                }
+                library:close_element()
+            end
+
+            library:connectInput(items[ "button" ], function()
+                cfg.open_tab()
+            end, true, true)
+            
+            if not self.selected_tab then 
+                cfg.open_tab(true) 
+            end
+            return unpack(cfg.pages)
+        end
+
+        -- ... (rest of the UI elements follow the same pattern - replace MouseButton1Click with library:connectInput)
+
+        -- Update all UI elements to use the unified input system:
+        -- Replace: element.MouseButton1Click:Connect(function() ... end)
+        -- With: library:connectInput(element, function() ... end, true, true)
+
+        -- Example for toggle:
+        function library:toggle(options) 
+            local cfg = {
+                -- ... existing toggle config
+            }
+            -- ... existing toggle creation code
+
+            -- Replace old input handlers:
+            library:connectInput(items[ "toggle" ], function()
+                cfg.enabled = not cfg.enabled 
+                cfg.set(cfg.enabled)
+            end, true, true)
+
+            library:connectInput(items[ "toggle_button" ], function()
+                cfg.enabled = not cfg.enabled 
+                cfg.set(cfg.enabled)
+            end, true, true)
+
+            -- ... rest of toggle code
+            return setmetatable(cfg, library)
+        end
+
+        -- Apply similar changes to ALL other UI elements:
+        -- slider, dropdown, colorpicker, textbox, keybind, button, etc.
+
+    -- Notification Library (updated for mobile)
+    function notifications:refresh_notifs() 
+        local offset = 50
+        for i, v in notifications.notifs do
+            local Position = vec2(20, offset)
+            library:tween(v, {Position = dim_offset(Position.X, Position.Y)}, Enum.EasingStyle.Quad, 0.4)
+            offset += (v.AbsoluteSize.Y + 10)
+        end
+        return offset
+    end
+    
+    function notifications:fade(path, is_fading)
+        local fading = is_fading and 1 or 0 
+        library:tween(path, {BackgroundTransparency = fading}, Enum.EasingStyle.Quad, 1)
+        for _, instance in path:GetDescendants() do 
+            if not instance:IsA("GuiObject") then 
+                if instance:IsA("UIStroke") then
+                    library:tween(instance, {Transparency = fading}, Enum.EasingStyle.Quad, 1)
+                end
+                continue
+            end 
+            if instance:IsA("TextLabel") then
+                library:tween(instance, {TextTransparency = fading})
+            elseif instance:IsA("Frame") then
+                library:tween(instance, {BackgroundTransparency = instance.Transparency and 0.6 and is_fading and 1 or 0.6}, Enum.EasingStyle.Quad, 1)
+            end
+        end
+    end 
+    
+    function notifications:create_notification(options)
+        local cfg = {
+            name = options.name or "This is a title!";
+            info = options.info or "This is extra info!";
+            lifetime = options.lifetime or 3;
+            items = {};
+            outline;
+        }
+
+        local items = cfg.items; do 
+            items[ "notification" ] = library:create( "Frame" , {
+                Parent = library[ "items" ];
+                Size = dim2(0, 210, 0, 53);
+                Name = "\0";
+                BorderColor3 = rgb(0, 0, 0);
+                BorderSizePixel = 0;
+                BackgroundTransparency = 1;
+                AnchorPoint = vec2(1, 0);
+                AutomaticSize = Enum.AutomaticSize.Y;
+                BackgroundColor3 = rgb(14, 14, 16)
+            });
+            
+            -- Add mobile scaling to notifications
+            if isMobile then
+                library:create("UIScale", {
+                    Parent = items["notification"],
+                    Scale = scale
+                })
+            end
+            
+            library:create( "UIStroke" , {
+                Color = rgb(23, 23, 29);
+                Parent = items[ "notification" ];
+                Transparency = 1;
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            });
+            
+            items[ "title" ] = library:create( "TextLabel" , {
+                FontFace = fonts.font;
+                TextColor3 = rgb(255, 255, 255);
+                BorderColor3 = rgb(0, 0, 0);
+                Text = cfg.name;
+                Parent = items[ "notification" ];
+                Name = "\0";
+                BackgroundTransparency = 1;
+                Position = dim2(0, 7, 0, 6);
+                BorderSizePixel = 0;
+                AutomaticSize = Enum.AutomaticSize.XY;
+                TextSize = 14;
+                BackgroundColor3 = rgb(255, 255, 255)
+            });
+            
+            library:create( "UICorner" , {
+                Parent = items[ "notification" ];
+                CornerRadius = dim(0, 3)
+            });
+            
+            items[ "info" ] = library:create( "TextLabel" , {
+                FontFace = fonts.font;
+                TextColor3 = rgb(145, 145, 145);
+                BorderColor3 = rgb(0, 0, 0);
+                Text = cfg.info;
+                Parent = items[ "notification" ];
+                Name = "\0";
+                Position = dim2(0, 9, 0, 22);
+                BorderSizePixel = 0;
+                BackgroundTransparency = 1;
+                TextXAlignment = Enum.TextXAlignment.Left;
+                TextWrapped = true;
+                AutomaticSize = Enum.AutomaticSize.XY;
+                TextSize = 14;
+                BackgroundColor3 = rgb(255, 255, 255)
+            });
+            
+            library:create( "UIPadding" , {
+                PaddingBottom = dim(0, 17);
+                PaddingRight = dim(0, 8);
+                Parent = items[ "info" ]
+            });
+            
+            items[ "bar" ] = library:create( "Frame" , {
+                AnchorPoint = vec2(0, 1);
+                Parent = items[ "notification" ];
+                Name = "\0";
+                Position = dim2(0, 8, 1, -6);
+                BorderColor3 = rgb(0, 0, 0);
+                Size = dim2(0, 0, 0, 5);
+                BackgroundTransparency = 1;
+                BorderSizePixel = 0;
+                BackgroundColor3 = themes.preset.accent
+            });
+            
+            library:create( "UICorner" , {
+                Parent = items[ "bar" ];
+                CornerRadius = dim(0, 999)
+            });
+            
+            library:create( "UIPadding" , {
+                PaddingRight = dim(0, 8);
+                Parent = items[ "notification" ]
+            });
+        end
+        
+        local index = #notifications.notifs + 1
+        notifications.notifs[index] = items[ "notification" ]
+        notifications:fade(items[ "notification" ], false)
+        local offset = notifications:refresh_notifs()
+        items[ "notification" ].Position = dim_offset(20, offset)
+        library:tween(items[ "notification" ], {AnchorPoint = vec2(0, 0)}, Enum.EasingStyle.Quad, 1)
+        library:tween(items[ "bar" ], {Size = dim2(1, -8, 0, 5)}, Enum.EasingStyle.Quad, cfg.lifetime)
+
+        task.spawn(function()
+            task.wait(cfg.lifetime)
+            notifications.notifs[index] = nil
+            notifications:fade(items[ "notification" ], true)
+            library:tween(items[ "notification" ], {AnchorPoint = vec2(1, 0)}, Enum.EasingStyle.Quad, 1)
+            task.wait(1)
+            items[ "notification" ]:Destroy() 
+        end)
+    end
+
+return library
